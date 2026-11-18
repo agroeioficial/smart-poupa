@@ -28,3 +28,13 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## SMART POUPA — regras técnicas do projeto
+
+- Data security lives in the database: every group-owned table has RLS with SELECT-only policies and no direct write grants; all writes go through `SECURITY DEFINER` RPCs that check the caller's group role and append to `audit_log`. Why: the spec requires server-side isolation, never UI-only hiding.
+- Every group-owned row carries `group_id`; role checks use the helper functions (`has_group_role`, `is_group_admin`, `can_manage_members`, `is_active_member`). Why: one isolation rule reused by every policy and RPC.
+- Sensitive member data (email, ID document, birth date, address) lives only in `member_private_data`, separate from the shareable `group_members` row. Why: Postgres RLS is row-level, so column privacy needs a separate table.
+- Platform roles (AGROEI) live in `platform_roles`, group roles in `group_member_roles`; never store roles on profiles. Why: prevents privilege escalation.
+- Confirmed records are never physically deleted; members change status instead. Why: audit and integrity rules of the spec.
+- `src/lib/roles.ts` mirrors the database permission rules for the UI only; keep both in sync and cover changes in `src/test/roles.test.ts` and `scripts/test-rls-fase1.ts` (live DB isolation test with throwaway `@exemplo.test` accounts).
+- The signed-in area is `src/routes/_authenticated/` (client-only, `ssr: false`); reads use the browser Supabase client under RLS. Why: the session lives in browser storage.

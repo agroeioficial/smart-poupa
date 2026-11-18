@@ -1,0 +1,156 @@
+// Teste de isolamento e permissões da Fase 1 contra a base de dados real.
+// Cria contas e grupos fictícios (@exemplo.test) e apaga-os no fim. Requer SUPABASE_URL,
+// SUPABASE_PUBLISHABLE_KEY e SUPABASE_SERVICE_ROLE_KEY. Executar: bun scripts/test-rls-fase1.ts
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+const URL = process.env.SUPABASE_URL!, ANON = process.env.SUPABASE_PUBLISHABLE_KEY!, SR = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const opts = { auth: { persistSession: false, autoRefreshToken: false } };
+const admin = createClient(URL, SR, opts);
+const tag = "f1t" + Date.now().toString(36);
+const mail = (n: string) => `${tag}-${n}@exemplo.test`;
+const PW = "Teste-" + tag + "!9";
+let pass = 0, fail = 0; const results: string[] = [];
+function check(name: string, ok: boolean, extra = "") { ok ? pass++ : fail++; results.push(`${ok ? "PASS" : "FAIL"} | ${name}${extra ? " | " + extra : ""}`); }
+const users: Record<string, string> = {};
+async function mkUser(n: string) {
+  const { data, error } = await admin.auth.admin.createUser({ email: mail(n), password: PW, email_confirm: true, user_metadata: { full_name: "Teste " + n } });
+  if (error) throw error; users[n] = data.user.id; return data.user.id;
+}
+async function login(n: string): Promise<SupabaseClient> {
+  const c = createClient(URL, ANON, opts);
+  const { error } = await c.auth.signInWithPassword({ email: mail(n), password: PW });
+  if (error) throw new Error(n + ": " + error.message); return c;
+}
+const groupIds: string[] = [];
+try {
+  for (const n of ["owner", "dirA", "dirB", "memA1", "memA2", "tesA", "secA", "outsider"]) await mkUser(n);
+  const { data: prof } = await admin.from("profiles").select("id,full_name").in("id", Object.values(users));
+  check("Trigger cria perfil ao registar conta", prof?.length === 8);
+  await admin.from("platform_roles").insert({ user_id: users.owner, role: "agroei_owner" });
+
+  const owner = await login("owner"), dirA = await login("dirA"), dirB = await login("dirB"), outsider = await login("outsider");
+  const { data: gA, error: eA } = await owner.rpc("create_group", { _name: "Grupo Teste A", _location: "Maputo", _official_phone: "", _official_email: "", _director_name: "Diretor A", _director_email: mail("dirA"), _director_phone: "840000001" });
+  const { data: gB } = await owner.rpc("create_group", { _name: "Grupo Teste B", _location: "Beira", _official_phone: "", _official_email: "", _director_name: "Diretor B", _director_email: mail("dirB"), _director_phone: "840000002" });
+  groupIds.push(gA as string, gB as string);
+  check("AGROEI cria grupos", !eA && !!gA && !!gB, eA?.message);
+  const { error: eNo } = await dirA.rpc("create_group", { _name: "X", _location: "", _official_phone: "", _official_email: "", _director_name: "Y", _director_email: "y@exemplo.test", _director_phone: "" });
+  check("Não-AGROEI não consegue criar grupo", !!eNo, eNo?.message);
+
+  const { data: invA } = await dirA.from("group_members").select("id,status,group_id").eq("user_id", users.dirA);
+  check("Diretor A vê o convite pendente", invA?.length === 1 && invA[0].status === "convidado");
+  const { data: gVisPre } = await dirA.from("groups").select("id");
+  check("Diretor A (convidado) vê só o Grupo A", gVisPre?.length === 1 && gVisPre[0].id === gA);
+  await dirA.rpc("accept_invitation", { _member_id: invA![0].id });
+  const { data: invB } = await dirB.from("group_members").select("id").eq("user_id", users.dirB);
+  await dirB.rpc("accept_invitation", { _member_id: invB![0].id });
+
+  const add = (c: SupabaseClient, n: string, roles: string[], g = gA) => c.rpc("add_group_member", { _group_id: g, _full_name: "Pessoa " + n, _email: mail(n), _phone: "84" + Math.floor(Math.random() * 1e7), _profession: "Agricultor", _roles: roles as any, _id_document_type: "BI", _id_document_number: "TESTE-" + n, _birth_date: "1990-01-01", _address: "Rua de teste" });
+  for (const [n, r] of [["memA1", ["membro"]], ["memA2", ["membro"]], ["tesA", ["tesoureiro", "membro"]], ["secA", ["secretario"]]] as const) {
+    const { error } = await add(dirA, n, [...r]); check(`Diretor A cadastra ${n}`, !error, error?.message);
+  }
+  const { error: eDup } = await add(dirA, "memA1", ["membro"]);
+  check("Email duplicado no mesmo grupo é recusado", !!eDup, eDup?.message);
+  const cl: Record<string, SupabaseClient> = {};
+  for (const n of ["memA1", "memA2", "tesA", "secA"]) {
+    cl[n] = await login(n);
+    const { data } = await cl[n].from("group_members").select("id").eq("user_id", users[n]);
+    const { error } = await cl[n].rpc("accept_invitation", { _member_id: data![0].id });
+    check(`${n} aceita convite`, !error, error?.message);
+  }
+
+  // Isolamento entre grupos
+  for (const t of ["groups", "group_members", "group_member_roles", "member_private_data", "audit_log"] as const) {
+    const col = t === "groups" ? "id" : "group_id";
+    const { data } = await dirB.from(t).select("*").eq(col, gA as string);
+    check(`Diretor B não vê ${t} do Grupo A`, (data?.length ?? 0) === 0, `linhas=${data?.length}`);
+  }
+  const { error: eCross } = await add(dirB, "intruso", ["membro"], gA as string);
+  check("Diretor B não cadastra membros no Grupo A", !!eCross, eCross?.message);
+  const { data: memA1row } = await dirA.from("group_members").select("id").eq("user_id", users.memA1).single();
+  const { error: eCrossUpd } = await dirB.rpc("update_group_member", { _member_id: memA1row!.id, _full_name: "Hack", _phone: "", _profession: "", _id_document_type: "", _id_document_number: "", _birth_date: null as any, _address: "" });
+  check("Diretor B não edita membro do Grupo A", !!eCrossUpd, eCrossUpd?.message);
+  const { error: eCrossSt } = await dirB.rpc("set_member_status", { _member_id: memA1row!.id, _status: "suspenso" });
+  check("Diretor B não suspende membro do Grupo A", !!eCrossSt, eCrossSt?.message);
+  const { data: outG } = await outsider.from("groups").select("id");
+  const { data: outM } = await outsider.from("group_members").select("id");
+  check("Utilizador sem grupo não vê grupos nem membros", (outG?.length ?? 0) === 0 && (outM?.length ?? 0) === 0);
+  const anon = createClient(URL, ANON, opts);
+  const { data: anonG } = await anon.from("groups").select("id");
+  const { data: anonP } = await anon.from("member_private_data").select("*");
+  check("Visitante sem sessão não vê nada", (anonG?.length ?? 0) === 0 && (anonP?.length ?? 0) === 0);
+
+  // Privacidade dentro do grupo
+  const { data: m1Off } = await cl.memA1.from("group_members").select("id").eq("group_id", gA as string);
+  check("Membro com lista desativada só se vê a si", m1Off?.length === 1);
+  const { error: eSet } = await dirA.rpc("update_group_settings", { _group_id: gA, _name: "Grupo Teste A", _location: "Maputo", _official_phone: "", _official_email: "", _member_directory_visible: true });
+  check("Diretor ativa lista de membros", !eSet, eSet?.message);
+  const { data: m1On } = await cl.memA1.from("group_members").select("full_name,phone,profession").eq("group_id", gA as string);
+  check("Membro vê os 5 membros ativos com a lista ativada", m1On?.length === 5, `linhas=${m1On?.length}`);
+  const { data: m1Priv } = await cl.memA1.from("member_private_data").select("member_id,id_document_number");
+  check("Membro só vê os próprios dados sensíveis", m1Priv?.length === 1 && m1Priv[0].id_document_number === "TESTE-memA1");
+  const { data: m1Audit } = await cl.memA1.from("audit_log").select("id");
+  check("Membro não vê o histórico de atividade", (m1Audit?.length ?? 0) === 0);
+  const { data: tesPriv } = await cl.tesA.from("member_private_data").select("member_id");
+  check("Tesoureiro só vê os próprios dados sensíveis", tesPriv?.length === 1);
+  const { data: tesList } = await cl.tesA.from("group_members").select("id").eq("group_id", gA as string);
+  check("Tesoureiro (administrador) vê todos os membros", tesList?.length === 5);
+  const { data: secPriv } = await cl.secA.from("member_private_data").select("member_id").eq("group_id", gA as string);
+  check("Secretário vê dados sensíveis do seu grupo", secPriv?.length === 5);
+  const { data: dirAudit } = await dirA.from("audit_log").select("action").eq("group_id", gA as string);
+  check("Diretor vê histórico de atividade", (dirAudit?.length ?? 0) >= 6, `ações=${dirAudit?.length}`);
+  const { data: ownM } = await owner.from("group_members").select("id");
+  const { data: ownP } = await owner.from("member_private_data").select("member_id");
+  const { data: ownG } = await owner.from("groups").select("id").in("id", groupIds);
+  check("AGROEI vê grupos mas não membros nem dados pessoais", ownG?.length === 2 && (ownM?.length ?? 0) === 0 && (ownP?.length ?? 0) === 0);
+
+  // Permissões por papel
+  const { error: eSecAdm } = await add(cl.secA, "novoTes", ["tesoureiro"]);
+  check("Secretário não atribui papéis administrativos", !!eSecAdm, eSecAdm?.message);
+  const { error: eSecMem } = await add(cl.secA, "novoMem", ["membro"]);
+  check("Secretário cadastra membro comum", !eSecMem, eSecMem?.message);
+  const { error: eMemAdd } = await add(cl.memA1, "x2", ["membro"]);
+  check("Membro não cadastra membros", !!eMemAdd, eMemAdd?.message);
+  const { error: eTesAdd } = await add(cl.tesA, "x3", ["membro"]);
+  check("Tesoureiro não cadastra membros", !!eTesAdd, eTesAdd?.message);
+  const { data: memA2row } = await dirA.from("group_members").select("id").eq("user_id", users.memA2).single();
+  const { error: eMemSt } = await cl.memA1.rpc("set_member_status", { _member_id: memA2row!.id, _status: "suspenso" });
+  check("Membro não suspende outro membro", !!eMemSt, eMemSt?.message);
+  const { data: tesRow } = await dirA.from("group_members").select("id").eq("user_id", users.tesA).single();
+  const { error: eSecSusAdm } = await cl.secA.rpc("set_member_status", { _member_id: tesRow!.id, _status: "suspenso" });
+  check("Secretário não suspende administrador", !!eSecSusAdm, eSecSusAdm?.message);
+  const { error: eSus } = await dirA.rpc("set_member_status", { _member_id: memA2row!.id, _status: "suspenso" });
+  check("Diretor suspende membro", !eSus, eSus?.message);
+  const { data: m2Groups } = await cl.memA2.from("groups").select("id");
+  check("Membro suspenso perde acesso ao grupo", (m2Groups?.length ?? 0) === 0);
+  const { data: dirArow } = await dirA.from("group_members").select("id").eq("user_id", users.dirA).single();
+  const { error: eLast } = await dirA.rpc("set_member_roles", { _member_id: dirArow!.id, _roles: ["membro"] as any });
+  check("Grupo mantém pelo menos um Diretor ativo", !!eLast, eLast?.message);
+  const { error: eSelf } = await dirA.rpc("set_member_status", { _member_id: dirArow!.id, _status: "suspenso" });
+  check("Ninguém altera o próprio estado", !!eSelf, eSelf?.message);
+
+  // Escrita direta bloqueada
+  const { error: eIns } = await dirA.from("groups").insert({ name: "Direto" });
+  const { error: eUpd, data: upd } = await dirA.from("group_members").update({ full_name: "Mudado" }).eq("id", memA1row!.id).select();
+  const { error: eDel, data: del } = await dirA.from("group_members").delete().eq("id", memA1row!.id).select();
+  check("Escrita direta nas tabelas é bloqueada (só via funções seguras)", !!eIns && (!!eUpd || (upd?.length ?? 0) === 0) && (!!eDel || (del?.length ?? 0) === 0));
+  const { error: ePlat } = await dirA.from("platform_roles").insert({ user_id: users.dirA, role: "agroei_owner" });
+  check("Utilizador não se promove a AGROEI", !!ePlat, ePlat?.message);
+
+  // Convite antes de criar conta
+  const { error: eLate } = await add(dirA, "tardio", ["membro"]);
+  await mkUser("tardio");
+  const tardio = await login("tardio");
+  const { data: tInv } = await tardio.from("group_members").select("status");
+  check("Convite feito antes do registo liga-se à nova conta", !eLate && tInv?.length === 1 && tInv[0].status === "convidado");
+  const { data: tG } = await tardio.from("groups").select("name");
+  check("Convidado vê apenas o nome do grupo que o convidou", tG?.length === 1);
+} catch (e) { check("Execução sem erros", false, String((e as Error).message ?? e)); }
+finally {
+  if (groupIds.length) {
+    for (const t of ["audit_log", "group_member_roles", "member_private_data", "group_members"]) await admin.from(t).delete().in("group_id", groupIds);
+    await admin.from("groups").delete().in("id", groupIds);
+  }
+  for (const id of Object.values(users)) await admin.auth.admin.deleteUser(id);
+  const { data: left } = await admin.from("groups").select("id").in("id", groupIds.length ? groupIds : ["00000000-0000-0000-0000-000000000000"]);
+  results.push(`Limpeza: grupos de teste restantes=${left?.length ?? 0}`);
+}
+console.log(results.join("\n")); console.log(`\nTOTAL: ${pass} PASS, ${fail} FAIL`);
