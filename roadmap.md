@@ -14,10 +14,11 @@
 - [x] Cadastro com todos os campos obrigatórios (base de dados)
 - [x] Suspensão/exclusão com aprovação da direção (base de dados)
 - [x] Histórico da direção visível a todos os membros (base de dados)
-- [ ] Tesoureiro vê dados sensíveis (só leitura)
+- [x] Tesoureiro vê dados sensíveis (só leitura)
+- [ ] Promoção a administrador por proposta com aprovação da direção (mesma regra)
+- [x] Reativação com aprovação da direção
 - [ ] Páginas: cadastro obrigatório, pedidos e votos, separador Direção
 - [ ] Testes atualizados
-- [ ] Aguarda resposta: quem promove administradores; reativação com aprovação
 
 ## Próximas fases (não iniciar sem pedido)
 - Fase 2 — Poupanças · Fase 3 — Empréstimos · Fase 4 — Administração · Fase 5 — SaaS AGROEI · Fase 6 — Exportação e PWA (ícones da app instalada já preparados)
