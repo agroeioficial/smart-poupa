@@ -10,5 +10,14 @@
 - [x] Usar o ícone oficial SMART POUPA (logótipo, favicon e ícone da app instalada)
 - [x] Testes de regras e verificação visual
 
+## Fase 1 — Decisões da AGROEI (18/11)
+- [x] Cadastro com todos os campos obrigatórios (base de dados)
+- [x] Suspensão/exclusão com aprovação da direção (base de dados)
+- [x] Histórico da direção visível a todos os membros (base de dados)
+- [ ] Tesoureiro vê dados sensíveis (só leitura)
+- [ ] Páginas: cadastro obrigatório, pedidos e votos, separador Direção
+- [ ] Testes atualizados
+- [ ] Aguarda resposta: quem promove administradores; reativação com aprovação
+
 ## Próximas fases (não iniciar sem pedido)
 - Fase 2 — Poupanças · Fase 3 — Empréstimos · Fase 4 — Administração · Fase 5 — SaaS AGROEI · Fase 6 — Exportação e PWA (ícones da app instalada já preparados)

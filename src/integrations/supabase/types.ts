@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_role_history: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_label: string
+          created_at: string
+          group_id: string
+          id: string
+          member_id: string | null
+          member_name: string
+          role: Database["public"]["Enums"]["group_role"]
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_label: string
+          created_at?: string
+          group_id: string
+          id?: string
+          member_id?: string | null
+          member_name: string
+          role: Database["public"]["Enums"]["group_role"]
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_label?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          member_id?: string | null
+          member_name?: string
+          role?: Database["public"]["Enums"]["group_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_role_history_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_role_history_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -237,6 +288,128 @@ export type Database = {
           },
         ]
       }
+      member_status_request_votes: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          reason: string | null
+          request_id: string
+          vote: Database["public"]["Enums"]["vote_choice"]
+          voter_member_id: string
+          voter_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          reason?: string | null
+          request_id: string
+          vote: Database["public"]["Enums"]["vote_choice"]
+          voter_member_id: string
+          voter_user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          reason?: string | null
+          request_id?: string
+          vote?: Database["public"]["Enums"]["vote_choice"]
+          voter_member_id?: string
+          voter_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_status_request_votes_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_status_request_votes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "member_status_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_status_request_votes_voter_member_id_fkey"
+            columns: ["voter_member_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_status_requests: {
+        Row: {
+          created_at: string
+          from_status: Database["public"]["Enums"]["member_status"]
+          group_id: string
+          id: string
+          member_id: string
+          reason: string
+          requested_by: string
+          requested_by_member: string
+          requested_status: Database["public"]["Enums"]["member_status"]
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_status: Database["public"]["Enums"]["member_status"]
+          group_id: string
+          id?: string
+          member_id: string
+          reason: string
+          requested_by: string
+          requested_by_member: string
+          requested_status: Database["public"]["Enums"]["member_status"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["member_status"]
+          group_id?: string
+          id?: string
+          member_id?: string
+          reason?: string
+          requested_by?: string
+          requested_by_member?: string
+          requested_status?: Database["public"]["Enums"]["member_status"]
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_status_requests_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_status_requests_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_status_requests_requested_by_member_fkey"
+            columns: ["requested_by_member"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_role_invites: {
         Row: {
           created_at: string
@@ -305,12 +478,55 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _active_member_id: {
+        Args: { _group: string; _uid: string }
+        Returns: string
+      }
+      _apply_status_request: {
+        Args: { _request_id: string }
+        Returns: undefined
+      }
+      _check_member_fields: {
+        Args: {
+          _address: string
+          _birth: string
+          _doc_number: string
+          _doc_type: string
+          _full_name: string
+          _phone: string
+          _profession: string
+        }
+        Returns: undefined
+      }
       _confirmed_user_id: { Args: { _email: string }; Returns: string }
       _link_user_invites: {
         Args: { _email: string; _uid: string }
         Returns: undefined
       }
+      _log_admin_roles: {
+        Args: {
+          _action: string
+          _actor: string
+          _actor_label: string
+          _member_id: string
+          _roles: Database["public"]["Enums"]["group_role"][]
+        }
+        Returns: undefined
+      }
+      _member_label: { Args: { _group: string; _uid: string }; Returns: string }
+      _req: { Args: { _label: string; _v: string }; Returns: string }
+      _status_request_state: {
+        Args: { _request_id: string }
+        Returns: Database["public"]["Enums"]["request_status"]
+      }
       _valid_email: { Args: { _email: string }; Returns: boolean }
+      _validate_status_change: {
+        Args: {
+          _m: Database["public"]["Tables"]["group_members"]["Row"]
+          _status: Database["public"]["Enums"]["member_status"]
+        }
+        Returns: undefined
+      }
       accept_invitation: { Args: { _member_id: string }; Returns: undefined }
       add_group_member: {
         Args: {
@@ -331,6 +547,10 @@ export type Database = {
         Args: { _group: string; _uid: string }
         Returns: boolean
       }
+      cancel_member_status_request: {
+        Args: { _request_id: string }
+        Returns: undefined
+      }
       create_group: {
         Args: {
           _director_email: string
@@ -342,6 +562,14 @@ export type Database = {
           _official_phone: string
         }
         Returns: string
+      }
+      group_board: {
+        Args: { _group_id: string }
+        Returns: {
+          full_name: string
+          member_id: string
+          roles: Database["public"]["Enums"]["group_role"][]
+        }[]
       }
       group_directory_visible: { Args: { _group: string }; Returns: boolean }
       has_group_role: {
@@ -369,17 +597,18 @@ export type Database = {
         Returns: boolean
       }
       is_platform_owner: { Args: { _uid: string }; Returns: boolean }
+      request_member_status_change: {
+        Args: {
+          _member_id: string
+          _reason: string
+          _status: Database["public"]["Enums"]["member_status"]
+        }
+        Returns: Database["public"]["Enums"]["request_status"]
+      }
       set_member_roles: {
         Args: {
           _member_id: string
           _roles: Database["public"]["Enums"]["group_role"][]
-        }
-        Returns: undefined
-      }
-      set_member_status: {
-        Args: {
-          _member_id: string
-          _status: Database["public"]["Enums"]["member_status"]
         }
         Returns: undefined
       }
@@ -407,12 +636,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      vote_member_status_request: {
+        Args: { _approve: boolean; _reason?: string; _request_id: string }
+        Returns: Database["public"]["Enums"]["request_status"]
+      }
     }
     Enums: {
       group_role: "diretor" | "tesoureiro" | "secretario" | "membro"
       group_status: "ativo" | "suspenso"
       member_status: "convidado" | "ativo" | "suspenso" | "excluido"
       platform_role: "agroei_owner"
+      request_status: "pendente" | "aprovado" | "rejeitado" | "cancelado"
+      vote_choice: "aprovado" | "rejeitado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -544,6 +779,8 @@ export const Constants = {
       group_status: ["ativo", "suspenso"],
       member_status: ["convidado", "ativo", "suspenso", "excluido"],
       platform_role: ["agroei_owner"],
+      request_status: ["pendente", "aprovado", "rejeitado", "cancelado"],
+      vote_choice: ["aprovado", "rejeitado"],
     },
   },
 } as const
