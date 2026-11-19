@@ -19,6 +19,7 @@ import { Route as AuthenticatedGrupoGroupIdRouteRouteImport } from './routes/_au
 import { Route as AuthenticatedGrupoGroupIdIndexRouteImport } from './routes/_authenticated/grupo/$groupId/index'
 import { Route as AuthenticatedGrupoGroupIdAtividadeRouteImport } from './routes/_authenticated/grupo/$groupId/atividade'
 import { Route as AuthenticatedGrupoGroupIdDefinicoesRouteImport } from './routes/_authenticated/grupo/$groupId/definicoes'
+import { Route as AuthenticatedGrupoGroupIdDirecaoRouteImport } from './routes/_authenticated/grupo/$groupId/direcao'
 import { Route as AuthenticatedGrupoGroupIdMembrosRouteImport } from './routes/_authenticated/grupo/$groupId/membros'
 
 const IndexRoute = IndexRouteImport.update({
@@ -74,6 +75,12 @@ const AuthenticatedGrupoGroupIdDefinicoesRoute =
     path: '/definicoes',
     getParentRoute: () => AuthenticatedGrupoGroupIdRouteRoute,
   } as any)
+const AuthenticatedGrupoGroupIdDirecaoRoute =
+  AuthenticatedGrupoGroupIdDirecaoRouteImport.update({
+    id: '/direcao',
+    path: '/direcao',
+    getParentRoute: () => AuthenticatedGrupoGroupIdRouteRoute,
+  } as any)
 const AuthenticatedGrupoGroupIdMembrosRoute =
   AuthenticatedGrupoGroupIdMembrosRouteImport.update({
     id: '/membros',
@@ -90,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/grupo/$groupId': typeof AuthenticatedGrupoGroupIdRouteRouteWithChildren
   '/grupo/$groupId/atividade': typeof AuthenticatedGrupoGroupIdAtividadeRoute
   '/grupo/$groupId/definicoes': typeof AuthenticatedGrupoGroupIdDefinicoesRoute
+  '/grupo/$groupId/direcao': typeof AuthenticatedGrupoGroupIdDirecaoRoute
   '/grupo/$groupId/membros': typeof AuthenticatedGrupoGroupIdMembrosRoute
   '/grupo/$groupId/': typeof AuthenticatedGrupoGroupIdIndexRoute
 }
@@ -101,6 +109,7 @@ export interface FileRoutesByTo {
   '/painel': typeof AuthenticatedPainelRoute
   '/grupo/$groupId/atividade': typeof AuthenticatedGrupoGroupIdAtividadeRoute
   '/grupo/$groupId/definicoes': typeof AuthenticatedGrupoGroupIdDefinicoesRoute
+  '/grupo/$groupId/direcao': typeof AuthenticatedGrupoGroupIdDirecaoRoute
   '/grupo/$groupId/membros': typeof AuthenticatedGrupoGroupIdMembrosRoute
   '/grupo/$groupId': typeof AuthenticatedGrupoGroupIdIndexRoute
 }
@@ -115,6 +124,7 @@ export interface FileRoutesById {
   '/_authenticated/grupo/$groupId': typeof AuthenticatedGrupoGroupIdRouteRouteWithChildren
   '/_authenticated/grupo/$groupId/atividade': typeof AuthenticatedGrupoGroupIdAtividadeRoute
   '/_authenticated/grupo/$groupId/definicoes': typeof AuthenticatedGrupoGroupIdDefinicoesRoute
+  '/_authenticated/grupo/$groupId/direcao': typeof AuthenticatedGrupoGroupIdDirecaoRoute
   '/_authenticated/grupo/$groupId/membros': typeof AuthenticatedGrupoGroupIdMembrosRoute
   '/_authenticated/grupo/$groupId/': typeof AuthenticatedGrupoGroupIdIndexRoute
 }
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/grupo/$groupId'
     | '/grupo/$groupId/atividade'
     | '/grupo/$groupId/definicoes'
+    | '/grupo/$groupId/direcao'
     | '/grupo/$groupId/membros'
     | '/grupo/$groupId/'
   fileRoutesByTo: FileRoutesByTo
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/painel'
     | '/grupo/$groupId/atividade'
     | '/grupo/$groupId/definicoes'
+    | '/grupo/$groupId/direcao'
     | '/grupo/$groupId/membros'
     | '/grupo/$groupId'
   id:
@@ -153,6 +165,7 @@ export interface FileRouteTypes {
     | '/_authenticated/grupo/$groupId'
     | '/_authenticated/grupo/$groupId/atividade'
     | '/_authenticated/grupo/$groupId/definicoes'
+    | '/_authenticated/grupo/$groupId/direcao'
     | '/_authenticated/grupo/$groupId/membros'
     | '/_authenticated/grupo/$groupId/'
   fileRoutesById: FileRoutesById
@@ -236,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGrupoGroupIdDefinicoesRouteImport
       parentRoute: typeof AuthenticatedGrupoGroupIdRouteRoute
     }
+    '/_authenticated/grupo/$groupId/direcao': {
+      id: '/_authenticated/grupo/$groupId/direcao'
+      path: '/direcao'
+      fullPath: '/grupo/$groupId/direcao'
+      preLoaderRoute: typeof AuthenticatedGrupoGroupIdDirecaoRouteImport
+      parentRoute: typeof AuthenticatedGrupoGroupIdRouteRoute
+    }
     '/_authenticated/grupo/$groupId/membros': {
       id: '/_authenticated/grupo/$groupId/membros'
       path: '/membros'
@@ -249,6 +269,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedGrupoGroupIdRouteRouteChildren {
   AuthenticatedGrupoGroupIdAtividadeRoute: typeof AuthenticatedGrupoGroupIdAtividadeRoute
   AuthenticatedGrupoGroupIdDefinicoesRoute: typeof AuthenticatedGrupoGroupIdDefinicoesRoute
+  AuthenticatedGrupoGroupIdDirecaoRoute: typeof AuthenticatedGrupoGroupIdDirecaoRoute
   AuthenticatedGrupoGroupIdMembrosRoute: typeof AuthenticatedGrupoGroupIdMembrosRoute
   AuthenticatedGrupoGroupIdIndexRoute: typeof AuthenticatedGrupoGroupIdIndexRoute
 }
@@ -259,6 +280,8 @@ const AuthenticatedGrupoGroupIdRouteRouteChildren: AuthenticatedGrupoGroupIdRout
       AuthenticatedGrupoGroupIdAtividadeRoute,
     AuthenticatedGrupoGroupIdDefinicoesRoute:
       AuthenticatedGrupoGroupIdDefinicoesRoute,
+    AuthenticatedGrupoGroupIdDirecaoRoute:
+      AuthenticatedGrupoGroupIdDirecaoRoute,
     AuthenticatedGrupoGroupIdMembrosRoute:
       AuthenticatedGrupoGroupIdMembrosRoute,
     AuthenticatedGrupoGroupIdIndexRoute: AuthenticatedGrupoGroupIdIndexRoute,

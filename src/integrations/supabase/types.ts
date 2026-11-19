@@ -346,42 +346,51 @@ export type Database = {
       member_status_requests: {
         Row: {
           created_at: string
-          from_status: Database["public"]["Enums"]["member_status"]
+          from_roles: Database["public"]["Enums"]["group_role"][] | null
+          from_status: Database["public"]["Enums"]["member_status"] | null
           group_id: string
           id: string
+          kind: string
           member_id: string
           reason: string
           requested_by: string
           requested_by_member: string
-          requested_status: Database["public"]["Enums"]["member_status"]
+          requested_roles: Database["public"]["Enums"]["group_role"][] | null
+          requested_status: Database["public"]["Enums"]["member_status"] | null
           resolved_at: string | null
           status: Database["public"]["Enums"]["request_status"]
           updated_at: string
         }
         Insert: {
           created_at?: string
-          from_status: Database["public"]["Enums"]["member_status"]
+          from_roles?: Database["public"]["Enums"]["group_role"][] | null
+          from_status?: Database["public"]["Enums"]["member_status"] | null
           group_id: string
           id?: string
+          kind?: string
           member_id: string
           reason: string
           requested_by: string
           requested_by_member: string
-          requested_status: Database["public"]["Enums"]["member_status"]
+          requested_roles?: Database["public"]["Enums"]["group_role"][] | null
+          requested_status?: Database["public"]["Enums"]["member_status"] | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           updated_at?: string
         }
         Update: {
           created_at?: string
-          from_status?: Database["public"]["Enums"]["member_status"]
+          from_roles?: Database["public"]["Enums"]["group_role"][] | null
+          from_status?: Database["public"]["Enums"]["member_status"] | null
           group_id?: string
           id?: string
+          kind?: string
           member_id?: string
           reason?: string
           requested_by?: string
           requested_by_member?: string
-          requested_status?: Database["public"]["Enums"]["member_status"]
+          requested_roles?: Database["public"]["Enums"]["group_role"][] | null
+          requested_status?: Database["public"]["Enums"]["member_status"] | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           updated_at?: string
@@ -514,12 +523,30 @@ export type Database = {
         Returns: undefined
       }
       _member_label: { Args: { _group: string; _uid: string }; Returns: string }
+      _open_board_request: {
+        Args: {
+          _kind: string
+          _m: Database["public"]["Tables"]["group_members"]["Row"]
+          _reason: string
+          _roles: Database["public"]["Enums"]["group_role"][]
+          _status: Database["public"]["Enums"]["member_status"]
+          _uid: string
+        }
+        Returns: Database["public"]["Enums"]["request_status"]
+      }
       _req: { Args: { _label: string; _v: string }; Returns: string }
       _status_request_state: {
         Args: { _request_id: string }
         Returns: Database["public"]["Enums"]["request_status"]
       }
       _valid_email: { Args: { _email: string }; Returns: boolean }
+      _validate_roles_change: {
+        Args: {
+          _m: Database["public"]["Tables"]["group_members"]["Row"]
+          _roles: Database["public"]["Enums"]["group_role"][]
+        }
+        Returns: undefined
+      }
       _validate_status_change: {
         Args: {
           _m: Database["public"]["Tables"]["group_members"]["Row"]
@@ -597,6 +624,14 @@ export type Database = {
         Returns: boolean
       }
       is_platform_owner: { Args: { _uid: string }; Returns: boolean }
+      request_member_roles_change: {
+        Args: {
+          _member_id: string
+          _reason: string
+          _roles: Database["public"]["Enums"]["group_role"][]
+        }
+        Returns: Database["public"]["Enums"]["request_status"]
+      }
       request_member_status_change: {
         Args: {
           _member_id: string
@@ -604,13 +639,6 @@ export type Database = {
           _status: Database["public"]["Enums"]["member_status"]
         }
         Returns: Database["public"]["Enums"]["request_status"]
-      }
-      set_member_roles: {
-        Args: {
-          _member_id: string
-          _roles: Database["public"]["Enums"]["group_role"][]
-        }
-        Returns: undefined
       }
       update_group_member: {
         Args: {

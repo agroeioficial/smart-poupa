@@ -39,6 +39,7 @@ function GroupLayout() {
   const tabs = [
     { to: "/grupo/$groupId" as const, label: "Início", exact: true, show: true },
     { to: "/grupo/$groupId/membros" as const, label: "Membros", exact: false, show: true },
+    { to: "/grupo/$groupId/direcao" as const, label: "Direção", exact: false, show: true },
     { to: "/grupo/$groupId/atividade" as const, label: "Atividade", exact: false, show: canEditSettings(roles) },
     { to: "/grupo/$groupId/definicoes" as const, label: "Definições", exact: false, show: canEditSettings(roles) },
   ].filter((t) => t.show);

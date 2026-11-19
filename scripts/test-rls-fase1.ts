@@ -68,8 +68,8 @@ try {
   const { data: memA1row } = await dirA.from("group_members").select("id").eq("user_id", users.memA1).single();
   const { error: eCrossUpd } = await dirB.rpc("update_group_member", { _member_id: memA1row!.id, _full_name: "Hack", _phone: "", _profession: "", _id_document_type: "", _id_document_number: "", _birth_date: null as any, _address: "" });
   check("Diretor B não edita membro do Grupo A", !!eCrossUpd, eCrossUpd?.message);
-  const { error: eCrossSt } = await dirB.rpc("set_member_status", { _member_id: memA1row!.id, _status: "suspenso" });
-  check("Diretor B não suspende membro do Grupo A", !!eCrossSt, eCrossSt?.message);
+  const { error: eCrossSt } = await dirB.rpc("request_member_status_change", { _member_id: memA1row!.id, _status: "suspenso", _reason: "teste" });
+  check("Diretor B não pede suspensão de membro do Grupo A", !!eCrossSt, eCrossSt?.message);
   const { data: outG } = await outsider.from("groups").select("id");
   const { data: outM } = await outsider.from("group_members").select("id");
   check("Utilizador sem grupo não vê grupos nem membros", (outG?.length ?? 0) === 0 && (outM?.length ?? 0) === 0);
@@ -90,7 +90,7 @@ try {
   const { data: m1Audit } = await cl.memA1.from("audit_log").select("id");
   check("Membro não vê o histórico de atividade", (m1Audit?.length ?? 0) === 0);
   const { data: tesPriv } = await cl.tesA.from("member_private_data").select("member_id");
-  check("Tesoureiro só vê os próprios dados sensíveis", tesPriv?.length === 1);
+  check("Tesoureiro vê dados sensíveis do seu grupo", tesPriv?.length === 5, `linhas=${tesPriv?.length}`);
   const { data: tesList } = await cl.tesA.from("group_members").select("id").eq("group_id", gA as string);
   check("Tesoureiro (administrador) vê todos os membros", tesList?.length === 5);
   const { data: secPriv } = await cl.secA.from("member_private_data").select("member_id").eq("group_id", gA as string);
@@ -102,30 +102,110 @@ try {
   const { data: ownG } = await owner.from("groups").select("id").in("id", groupIds);
   check("AGROEI vê grupos mas não membros nem dados pessoais", ownG?.length === 2 && (ownM?.length ?? 0) === 0 && (ownP?.length ?? 0) === 0);
 
-  // Permissões por papel
-  const { error: eSecAdm } = await add(cl.secA, "novoTes", ["tesoureiro"]);
-  check("Secretário não atribui papéis administrativos", !!eSecAdm, eSecAdm?.message);
+  // Cadastro obrigatório
+  const incompleto = await dirA.rpc("add_group_member", { _group_id: gA, _full_name: "Pessoa incompleta", _email: mail("inc"), _phone: "840000009", _profession: "Agricultor", _roles: ["membro"] as any, _id_document_type: "BI", _id_document_number: "X1", _birth_date: "1990-01-01", _address: "" });
+  check("Cadastro sem morada é recusado", !!incompleto.error, incompleto.error?.message);
+  const semDoc = await dirA.rpc("add_group_member", { _group_id: gA, _full_name: "Pessoa sem doc", _email: mail("inc2"), _phone: "840000009", _profession: "Agricultor", _roles: ["membro"] as any, _id_document_type: "", _id_document_number: "", _birth_date: "1990-01-01", _address: "Rua" });
+  check("Cadastro sem documento é recusado", !!semDoc.error, semDoc.error?.message);
+  const { error: eUpdInc } = await dirA.rpc("update_group_member", { _member_id: memA1row!.id, _full_name: "Pessoa memA1", _phone: "", _profession: "Agricultor", _id_document_type: "BI", _id_document_number: "TESTE-memA1", _birth_date: "1990-01-01", _address: "Rua" });
+  check("Edição que apaga o contacto é recusada", !!eUpdInc, eUpdInc?.message);
+
+  // Permissões de cadastro
   const { error: eSecMem } = await add(cl.secA, "novoMem", ["membro"]);
   check("Secretário cadastra membro comum", !eSecMem, eSecMem?.message);
   const { error: eMemAdd } = await add(cl.memA1, "x2", ["membro"]);
   check("Membro não cadastra membros", !!eMemAdd, eMemAdd?.message);
   const { error: eTesAdd } = await add(cl.tesA, "x3", ["membro"]);
   check("Tesoureiro não cadastra membros", !!eTesAdd, eTesAdd?.message);
+  const { data: tesUpd, error: eTesUpd } = await cl.tesA.rpc("update_group_member", { _member_id: memA1row!.id, _full_name: "X", _phone: "1", _profession: "1", _id_document_type: "1", _id_document_number: "1", _birth_date: "1990-01-01", _address: "1" });
+  check("Tesoureiro não edita membros", !!eTesUpd, eTesUpd?.message ?? String(tesUpd));
+  const { data: novoTesId, error: eSecAdm } = await add(cl.secA, "novoTes", ["tesoureiro"]);
+  const { data: novoTesRoles } = await dirA.from("group_member_roles").select("role").eq("member_id", novoTesId as string);
+  const { data: novoTesReq } = await dirA.from("member_status_requests").select("kind,status").eq("member_id", novoTesId as string);
+  check("Cargo indicado pelo Secretário no cadastro fica pendente de aprovação", !eSecAdm && (novoTesRoles?.length ?? 0) === 0 && novoTesReq?.[0]?.kind === "papeis" && novoTesReq?.[0]?.status === "pendente", eSecAdm?.message);
+  await dirA.rpc("cancel_member_status_request", { _request_id: (await dirA.from("member_status_requests").select("id").eq("member_id", novoTesId as string).single()).data!.id }).then(async () => {
+    const { data: c } = await dirA.from("member_status_requests").select("status").eq("member_id", novoTesId as string).single();
+    check("Só quem pediu pode cancelar (Diretor não cancela pedido do Secretário)", c?.status === "pendente");
+  });
+  const { data: secReq } = await cl.secA.from("member_status_requests").select("id").eq("member_id", novoTesId as string).single();
+  const { error: eCancel } = await cl.secA.rpc("cancel_member_status_request", { _request_id: secReq!.id });
+  check("Quem pediu cancela o pedido pendente", !eCancel, eCancel?.message);
+
+  // Pedidos de estado com aprovação da direção (3 administradores: Diretor, Tesoureiro, Secretário)
   const { data: memA2row } = await dirA.from("group_members").select("id").eq("user_id", users.memA2).single();
-  const { error: eMemSt } = await cl.memA1.rpc("set_member_status", { _member_id: memA2row!.id, _status: "suspenso" });
-  check("Membro não suspende outro membro", !!eMemSt, eMemSt?.message);
-  const { data: tesRow } = await dirA.from("group_members").select("id").eq("user_id", users.tesA).single();
-  const { error: eSecSusAdm } = await cl.secA.rpc("set_member_status", { _member_id: tesRow!.id, _status: "suspenso" });
-  check("Secretário não suspende administrador", !!eSecSusAdm, eSecSusAdm?.message);
-  const { error: eSus } = await dirA.rpc("set_member_status", { _member_id: memA2row!.id, _status: "suspenso" });
-  check("Diretor suspende membro", !eSus, eSus?.message);
+  const { error: eMemSt } = await cl.memA1.rpc("request_member_status_change", { _member_id: memA2row!.id, _status: "suspenso", _reason: "teste" });
+  check("Membro não pede suspensão", !!eMemSt, eMemSt?.message);
+  const { data: st1, error: eTesReq } = await cl.tesA.rpc("request_member_status_change", { _member_id: memA2row!.id, _status: "suspenso", _reason: "Faltas repetidas" });
+  check("Tesoureiro pede suspensão; fica pendente com 3 administradores", !eTesReq && st1 === "pendente", eTesReq?.message ?? String(st1));
+  const { error: eNoReason } = await cl.secA.rpc("request_member_status_change", { _member_id: memA1row!.id, _status: "suspenso", _reason: "  " });
+  check("Pedido sem motivo é recusado", !!eNoReason, eNoReason?.message);
+  const { error: eDupReq } = await dirA.rpc("request_member_status_change", { _member_id: memA2row!.id, _status: "excluido", _reason: "Outro" });
+  check("Só um pedido pendente por membro", !!eDupReq, eDupReq?.message);
+  const { data: reqMem } = await cl.memA1.from("member_status_requests").select("id");
+  const { data: reqB } = await dirB.from("member_status_requests").select("id").eq("group_id", gA as string);
+  check("Membro e outro grupo não veem pedidos da direção", (reqMem?.length ?? 0) === 0 && (reqB?.length ?? 0) === 0);
+  const { data: req1 } = await dirA.from("member_status_requests").select("id").eq("member_id", memA2row!.id).eq("status", "pendente").single();
+  const { error: eVoteB } = await dirB.rpc("vote_member_status_request", { _request_id: req1!.id, _approve: true, _reason: "" });
+  check("Diretor B não vota em pedido do Grupo A", !!eVoteB, eVoteB?.message);
+  const { error: eVoteMem } = await cl.memA1.rpc("vote_member_status_request", { _request_id: req1!.id, _approve: true, _reason: "" });
+  check("Membro não vota", !!eVoteMem, eVoteMem?.message);
+  const { data: v1 } = await dirA.rpc("vote_member_status_request", { _request_id: req1!.id, _approve: true, _reason: "" });
+  check("Com Diretor e Tesoureiro ainda falta o Secretário", v1 === "pendente", String(v1));
+  const { data: still } = await dirA.from("group_members").select("status").eq("id", memA2row!.id).single();
+  check("Membro continua ativo enquanto o pedido está pendente", still?.status === "ativo");
+  const { error: eTwice } = await dirA.rpc("vote_member_status_request", { _request_id: req1!.id, _approve: true, _reason: "" });
+  check("Ninguém vota duas vezes", !!eTwice, eTwice?.message);
+  const { data: v2 } = await cl.secA.rpc("vote_member_status_request", { _request_id: req1!.id, _approve: true, _reason: "" });
+  const { data: m2st } = await dirA.from("group_members").select("status").eq("id", memA2row!.id).single();
+  check("Com os 3 principais o membro é suspenso", v2 === "aprovado" && m2st?.status === "suspenso", `${v2}/${m2st?.status}`);
   const { data: m2Groups } = await cl.memA2.from("groups").select("id");
   check("Membro suspenso perde acesso ao grupo", (m2Groups?.length ?? 0) === 0);
+
+  const { data: st2 } = await cl.secA.rpc("request_member_status_change", { _member_id: memA1row!.id, _status: "excluido", _reason: "Teste de rejeição" });
+  const { data: req2 } = await dirA.from("member_status_requests").select("id").eq("member_id", memA1row!.id).eq("status", "pendente").single();
+  const { error: eRejNo } = await cl.tesA.rpc("vote_member_status_request", { _request_id: req2!.id, _approve: false, _reason: "" });
+  check("Rejeitar exige motivo", !!eRejNo, eRejNo?.message);
+  const { data: v3 } = await cl.tesA.rpc("vote_member_status_request", { _request_id: req2!.id, _approve: false, _reason: "Não concordo" });
+  const { data: m1st } = await dirA.from("group_members").select("status").eq("id", memA1row!.id).single();
+  check("Uma rejeição rejeita o pedido", st2 === "pendente" && v3 === "rejeitado" && m1st?.status === "ativo", `${st2}/${v3}/${m1st?.status}`);
+
   const { data: dirArow } = await dirA.from("group_members").select("id").eq("user_id", users.dirA).single();
-  const { error: eLast } = await dirA.rpc("set_member_roles", { _member_id: dirArow!.id, _roles: ["membro"] as any });
+  const { error: eSelf } = await dirA.rpc("request_member_status_change", { _member_id: dirArow!.id, _status: "suspenso", _reason: "teste" });
+  check("Ninguém pede a alteração do próprio estado", !!eSelf, eSelf?.message);
+  const { error: eLast } = await cl.tesA.rpc("request_member_roles_change", { _member_id: dirArow!.id, _roles: ["membro"] as any, _reason: "teste" });
   check("Grupo mantém pelo menos um Diretor ativo", !!eLast, eLast?.message);
-  const { error: eSelf } = await dirA.rpc("set_member_status", { _member_id: dirArow!.id, _status: "suspenso" });
-  check("Ninguém altera o próprio estado", !!eSelf, eSelf?.message);
+  const { error: eSelfRole } = await dirA.rpc("request_member_roles_change", { _member_id: dirArow!.id, _roles: ["diretor", "tesoureiro"] as any, _reason: "teste" });
+  check("Ninguém propõe os próprios cargos", !!eSelfRole, eSelfRole?.message);
+
+  // Promoção com aprovação da direção
+  const { data: p1 } = await dirA.rpc("request_member_roles_change", { _member_id: memA1row!.id, _roles: ["secretario", "membro"] as any, _reason: "Reforço da secretaria" });
+  const { data: reqP } = await dirA.from("member_status_requests").select("id").eq("member_id", memA1row!.id).eq("status", "pendente").single();
+  await cl.tesA.rpc("vote_member_status_request", { _request_id: reqP!.id, _approve: true, _reason: "" });
+  const { data: p3 } = await cl.secA.rpc("vote_member_status_request", { _request_id: reqP!.id, _approve: true, _reason: "" });
+  const { data: m1roles } = await dirA.from("group_member_roles").select("role").eq("member_id", memA1row!.id);
+  check("Promoção aplica-se só depois da aprovação dos 3 principais", p1 === "pendente" && p3 === "aprovado" && (m1roles ?? []).some((r) => r.role === "secretario"), `${p1}/${p3}`);
+
+  // 4 administradores: bastam os 3 principais
+  const { data: novoMemRow } = await dirA.from("group_members").select("id").eq("full_name", "Pessoa novoMem").single();
+  await dirA.rpc("request_member_status_change", { _member_id: novoMemRow!.id, _status: "suspenso", _reason: "Teste com 4" });
+  const { data: req4 } = await dirA.from("member_status_requests").select("id").eq("member_id", novoMemRow!.id).eq("status", "pendente").single();
+  await cl.secA.rpc("vote_member_status_request", { _request_id: req4!.id, _approve: true, _reason: "" });
+  const { data: q2 } = await cl.memA1.rpc("vote_member_status_request", { _request_id: req4!.id, _approve: true, _reason: "" });
+  check("Com 4 administradores, 3 votos sem o Tesoureiro não chegam", q2 === "pendente", String(q2));
+  const { data: q3 } = await cl.tesA.rpc("vote_member_status_request", { _request_id: req4!.id, _approve: true, _reason: "" });
+  check("Com o Tesoureiro, o pedido é aprovado", q3 === "aprovado", String(q3));
+
+  // Histórico da direção
+  const { data: histMem } = await cl.memA1.from("admin_role_history").select("member_name,role,action").eq("group_id", gA as string);
+  check("Membros do grupo veem o histórico da direção", (histMem ?? []).some((h) => h.member_name === "Pessoa memA1" && h.role === "secretario" && h.action === "atribuido"), `linhas=${histMem?.length}`);
+  const { data: histB } = await dirB.from("admin_role_history").select("id").eq("group_id", gA as string);
+  const { data: histOwner } = await owner.from("admin_role_history").select("id");
+  check("Outro grupo e AGROEI não veem o histórico da direção", (histB?.length ?? 0) === 0 && (histOwner?.length ?? 0) === 0);
+  const { data: boardMem } = await cl.memA1.rpc("group_board", { _group_id: gA as string });
+  const { data: boardB } = await dirB.rpc("group_board", { _group_id: gA as string });
+  check("Direção atual visível aos membros, não a outros grupos", (boardMem?.length ?? 0) === 4 && (boardB?.length ?? 0) === 0, `${boardMem?.length}/${boardB?.length}`);
+  const { error: eDirReq } = await dirA.from("member_status_requests").insert({ group_id: gA, member_id: memA1row!.id, kind: "estado", from_status: "ativo", requested_status: "excluido", reason: "direto", requested_by: users.dirA, requested_by_member: dirArow!.id } as any);
+  check("Pedidos não podem ser criados por escrita direta", !!eDirReq, eDirReq?.message);
 
   // Escrita direta bloqueada
   const { error: eIns } = await dirA.from("groups").insert({ name: "Direto" });
@@ -146,7 +226,7 @@ try {
 } catch (e) { check("Execução sem erros", false, String((e as Error).message ?? e)); }
 finally {
   if (groupIds.length) {
-    for (const t of ["audit_log", "group_member_roles", "member_private_data", "group_members"]) await admin.from(t).delete().in("group_id", groupIds);
+    for (const t of ["audit_log", "admin_role_history", "member_status_request_votes", "member_status_requests", "group_member_roles", "member_private_data", "group_members"]) await admin.from(t).delete().in("group_id", groupIds);
     await admin.from("groups").delete().in("id", groupIds);
   }
   for (const id of Object.values(users)) await admin.auth.admin.deleteUser(id);

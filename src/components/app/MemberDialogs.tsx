@@ -5,12 +5,13 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { memberPrivateQuery, type MemberRow } from "@/lib/queries";
 import { errorMessage, formatDate } from "@/lib/format";
-import { ALL_ROLES, ROLE_LABEL, STATUS_LABEL, canAssignRoles, type GroupRole, type MemberStatus } from "@/lib/roles";
+import { ALL_ROLES, ROLE_LABEL, STATUS_LABEL, type GroupRole, type MemberStatus, type RequestState } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -19,98 +20,95 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
-const optional = (max: number) => z.string().trim().max(max);
+const required = (label: string, max: number) =>
+  z.string().trim().min(1, `${label} é obrigatório.`).max(max, `${label} é demasiado longo.`);
+
 const baseSchema = z.object({
   full_name: z.string().trim().min(2, "Indique o nome completo.").max(120),
-  phone: optional(30),
-  profession: optional(80),
-  id_document_type: optional(40),
-  id_document_number: optional(40),
-  birth_date: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data de nascimento inválida.")]),
-  address: optional(200),
+  phone: required("O contacto", 30),
+  profession: required("A profissão", 80),
+  id_document_type: required("O tipo de documento", 40),
+  id_document_number: required("O número do documento", 40),
+  birth_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "A data de nascimento é obrigatória.")
+    .refine((d) => new Date(d) <= new Date(), "A data de nascimento não pode ser no futuro."),
+  address: required("A morada", 200),
 });
 const addSchema = baseSchema.extend({ email: z.string().trim().email("Indique um email válido.").max(255) });
+const reasonSchema = z.string().trim().min(3, "Indique o motivo (pelo menos 3 caracteres).").max(500);
 
-function useInvalidateMembers(groupId: string) {
+export function useInvalidateMembers(groupId: string) {
   const qc = useQueryClient();
   return () => {
-    qc.invalidateQueries({ queryKey: ["members", groupId] });
-    qc.invalidateQueries({ queryKey: ["group-stats", groupId] });
-    qc.invalidateQueries({ queryKey: ["audit", groupId] });
+    for (const key of ["members", "members-private", "group-stats", "audit", "board", "board-requests", "admin-history"]) {
+      qc.invalidateQueries({ queryKey: [key, groupId] });
+    }
+    qc.invalidateQueries({ queryKey: ["memberships"] });
   };
+}
+
+export function announceRequest(state: RequestState, applied: string) {
+  if (state === "aprovado") toast.success(applied);
+  else toast.success("Pedido registado. Aguarda a aprovação da direção no separador “Direção”.");
 }
 
 function Field({ id, label, hint, ...props }: { id: string; label: string; hint?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id}>
+        {label}
+        {props.required ? <span className="text-destructive"> *</span> : null}
+      </Label>
       <Input id={id} {...props} />
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
 
-function RolePicker({ value, onChange, myRoles }: { value: GroupRole[]; onChange: (r: GroupRole[]) => void; myRoles: GroupRole[] }) {
-  const director = canAssignRoles(myRoles);
+function RolePicker({ value, onChange }: { value: GroupRole[]; onChange: (r: GroupRole[]) => void }) {
   return (
     <div className="grid grid-cols-2 gap-2">
-      {ALL_ROLES.map((r) => {
-        const disabled = r !== "membro" && !director;
-        const checked = value.includes(r);
-        return (
-          <label
-            key={r}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${disabled ? "opacity-50" : "cursor-pointer hover:bg-muted/60"}`}
-          >
-            <Checkbox
-              checked={checked}
-              disabled={disabled}
-              onCheckedChange={(c) => onChange(c ? [...value, r] : value.filter((x) => x !== r))}
-            />
-            {ROLE_LABEL[r]}
-          </label>
-        );
-      })}
-      {!director ? (
-        <p className="col-span-2 text-xs text-muted-foreground">Só o Diretor pode atribuir papéis administrativos.</p>
-      ) : null}
+      {ALL_ROLES.map((r) => (
+        <label key={r} className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted/60">
+          <Checkbox
+            checked={value.includes(r)}
+            onCheckedChange={(c) => onChange(c ? [...value, r] : value.filter((x) => x !== r))}
+          />
+          {ROLE_LABEL[r]}
+        </label>
+      ))}
     </div>
   );
 }
 
-function PrivateFields({ defaults }: { defaults?: undefined | { id_document_type?: string | null; id_document_number?: string | null; birth_date?: string | null; address?: string | null } }) {
+type PrivateDefaults = { id_document_type?: string | null; id_document_number?: string | null; birth_date?: string | null; address?: string | null };
+
+function PrivateFields({ defaults, readOnly }: { defaults?: PrivateDefaults; readOnly?: boolean }) {
+  const today = new Date().toISOString().slice(0, 10);
   return (
     <fieldset className="space-y-3 rounded-lg border border-dashed p-4">
       <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Dados sensíveis — visíveis só ao Diretor, Secretário e ao próprio
+        Dados sensíveis — visíveis só à direção e ao próprio
       </legend>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field id="m-doctype" name="id_document_type" label="Tipo de documento" placeholder="Ex.: BI" defaultValue={defaults?.id_document_type ?? ""} />
-        <Field id="m-docnum" name="id_document_number" label="Número do documento" defaultValue={defaults?.id_document_number ?? ""} />
-        <Field id="m-birth" name="birth_date" label="Data de nascimento" type="date" defaultValue={defaults?.birth_date ?? ""} />
-        <Field id="m-address" name="address" label="Morada" defaultValue={defaults?.address ?? ""} />
+        <Field id="m-doctype" name="id_document_type" label="Tipo de documento" placeholder="Ex.: BI" required readOnly={readOnly} defaultValue={defaults?.id_document_type ?? ""} />
+        <Field id="m-docnum" name="id_document_number" label="Número do documento" required readOnly={readOnly} defaultValue={defaults?.id_document_number ?? ""} />
+        <Field id="m-birth" name="birth_date" label="Data de nascimento" type="date" max={today} required readOnly={readOnly} defaultValue={defaults?.birth_date ?? ""} />
+        <Field id="m-address" name="address" label="Morada" required readOnly={readOnly} defaultValue={defaults?.address ?? ""} />
       </div>
     </fieldset>
   );
 }
 
-export function AddMemberDialog({ groupId, myRoles, open, onOpenChange }: { groupId: string; myRoles: GroupRole[]; open: boolean; onOpenChange: (o: boolean) => void }) {
+export function AddMemberDialog({ groupId, open, onOpenChange }: { groupId: string; open: boolean; onOpenChange: (o: boolean) => void }) {
   const [roles, setRoles] = useState<GroupRole[]>(["membro"]);
   const invalidate = useInvalidateMembers(groupId);
   useEffect(() => {
     if (open) setRoles(["membro"]);
   }, [open]);
+  const proposesAdmin = roles.some((r) => r !== "membro");
 
   const add = useMutation({
     mutationFn: async (v: z.infer<typeof addSchema>) => {
@@ -123,13 +121,17 @@ export function AddMemberDialog({ groupId, myRoles, open, onOpenChange }: { grou
         _roles: roles,
         _id_document_type: v.id_document_type,
         _id_document_number: v.id_document_number,
+        _birth_date: v.birth_date,
         _address: v.address,
-        ...(v.birth_date ? { _birth_date: v.birth_date } : {}),
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Membro cadastrado. Fica como “Convidado” até entrar com o email indicado e aceitar.");
+      toast.success(
+        proposesAdmin
+          ? "Membro cadastrado como “Convidado”. O cargo administrativo segue a aprovação da direção (veja “Direção”)."
+          : "Membro cadastrado. Fica como “Convidado” até entrar com o email indicado e aceitar.",
+      );
       invalidate();
       onOpenChange(false);
     },
@@ -149,18 +151,25 @@ export function AddMemberDialog({ groupId, myRoles, open, onOpenChange }: { grou
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Cadastrar membro</DialogTitle>
-          <DialogDescription>Nome, contacto e profissão podem ser vistos pelos membros, se o grupo ativar a lista.</DialogDescription>
+          <DialogDescription>
+            Todos os campos são obrigatórios. Nome, contacto e profissão podem ser vistos pelos membros, se o grupo ativar a lista.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
           <Field id="m-name" name="full_name" label="Nome completo" required />
           <Field id="m-email" name="email" type="email" label="Email" required hint="Usado para o membro entrar na sua própria conta. Não é mostrado aos outros membros." />
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field id="m-phone" name="phone" type="tel" label="Contacto" />
-            <Field id="m-prof" name="profession" label="Profissão" />
+            <Field id="m-phone" name="phone" type="tel" label="Contacto" required />
+            <Field id="m-prof" name="profession" label="Profissão" required />
           </div>
           <div className="space-y-1.5">
             <Label>Papéis</Label>
-            <RolePicker value={roles} onChange={setRoles} myRoles={myRoles} />
+            <RolePicker value={roles} onChange={setRoles} />
+            {proposesAdmin ? (
+              <p className="text-xs text-muted-foreground">
+                Cargos administrativos precisam da aprovação da direção antes de ficarem ativos.
+              </p>
+            ) : null}
           </div>
           <PrivateFields />
           <DialogFooter>
@@ -173,7 +182,8 @@ export function AddMemberDialog({ groupId, myRoles, open, onOpenChange }: { grou
   );
 }
 
-export function EditMemberDialog({ groupId, member, onClose }: { groupId: string; member: MemberRow | null; onClose: () => void }) {
+/** Editar (Diretor, Secretário) ou só consultar (Tesoureiro) os dados de um membro. */
+export function EditMemberDialog({ groupId, member, readOnly, onClose }: { groupId: string; member: MemberRow | null; readOnly?: boolean; onClose: () => void }) {
   const invalidate = useInvalidateMembers(groupId);
   const qc = useQueryClient();
   const priv = useQuery({ ...memberPrivateQuery(member?.id ?? ""), enabled: !!member });
@@ -187,7 +197,7 @@ export function EditMemberDialog({ groupId, member, onClose }: { groupId: string
         _profession: v.profession,
         _id_document_type: v.id_document_type,
         _id_document_number: v.id_document_number,
-        _birth_date: (v.birth_date || null) as string,
+        _birth_date: v.birth_date,
         _address: v.address,
       });
       if (error) throw error;
@@ -203,6 +213,7 @@ export function EditMemberDialog({ groupId, member, onClose }: { groupId: string
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (readOnly) return;
     const parsed = baseSchema.safeParse(Object.fromEntries(new FormData(e.currentTarget)));
     if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos."); return; }
     save.mutate(parsed.data);
@@ -212,9 +223,10 @@ export function EditMemberDialog({ groupId, member, onClose }: { groupId: string
     <Dialog open={!!member} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Editar membro</DialogTitle>
+          <DialogTitle>{readOnly ? "Dados do membro" : "Editar membro"}</DialogTitle>
           <DialogDescription>
             {member ? `${STATUS_LABEL[member.status]} · cadastrado em ${formatDate(member.created_at)}` : null}
+            {readOnly ? " · só consulta" : null}
           </DialogDescription>
         </DialogHeader>
         {member && priv.isLoading ? (
@@ -224,20 +236,22 @@ export function EditMemberDialog({ groupId, member, onClose }: { groupId: string
             <Skeleton className="h-24" />
           </div>
         ) : member ? (
-          <form key={member.id} onSubmit={onSubmit} className="space-y-4">
-            <Field id="e-name" name="full_name" label="Nome completo" required defaultValue={member.full_name} />
+          <form key={member.id} onSubmit={onSubmit} className="space-y-4" noValidate>
+            <Field id="e-name" name="full_name" label="Nome completo" required readOnly={readOnly} defaultValue={member.full_name} />
             <div className="space-y-1.5">
               <Label>Email</Label>
               <p className="rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">{priv.data?.email ?? "—"}</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field id="e-phone" name="phone" type="tel" label="Contacto" defaultValue={member.phone ?? ""} />
-              <Field id="e-prof" name="profession" label="Profissão" defaultValue={member.profession ?? ""} />
+              <Field id="e-phone" name="phone" type="tel" label="Contacto" required readOnly={readOnly} defaultValue={member.phone ?? ""} />
+              <Field id="e-prof" name="profession" label="Profissão" required readOnly={readOnly} defaultValue={member.profession ?? ""} />
             </div>
-            <PrivateFields defaults={priv.data ?? undefined} />
+            <PrivateFields defaults={priv.data ?? undefined} readOnly={readOnly} />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" disabled={save.isPending}>{save.isPending ? "A guardar…" : "Guardar"}</Button>
+              <Button type="button" variant="outline" onClick={onClose}>{readOnly ? "Fechar" : "Cancelar"}</Button>
+              {readOnly ? null : (
+                <Button type="submit" disabled={save.isPending}>{save.isPending ? "A guardar…" : "Guardar"}</Button>
+              )}
             </DialogFooter>
           </form>
         ) : null}
@@ -246,107 +260,146 @@ export function EditMemberDialog({ groupId, member, onClose }: { groupId: string
   );
 }
 
-export function RolesDialog({ groupId, member, myRoles, onClose }: { groupId: string; member: MemberRow | null; myRoles: GroupRole[]; onClose: () => void }) {
+function ReasonField({ value, onChange, label = "Motivo" }: { value: string; onChange: (v: string) => void; label?: string }) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor="req-reason">
+        {label}
+        <span className="text-destructive"> *</span>
+      </Label>
+      <Textarea id="req-reason" value={value} onChange={(e) => onChange(e.target.value)} maxLength={500} rows={3} />
+    </div>
+  );
+}
+
+/** Propor cargos para um membro; aplica-se após a aprovação da direção. */
+export function ProposeRolesDialog({ groupId, member, onClose }: { groupId: string; member: MemberRow | null; onClose: () => void }) {
   const [roles, setRoles] = useState<GroupRole[]>([]);
+  const [reason, setReason] = useState("");
   const invalidate = useInvalidateMembers(groupId);
-  const qc = useQueryClient();
   useEffect(() => {
-    if (member) setRoles(member.roles);
+    if (member) { setRoles(member.roles); setReason(""); }
   }, [member]);
 
   const save = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.rpc("set_member_roles", { _member_id: member!.id, _roles: roles });
+    mutationFn: async (why: string) => {
+      const { data, error } = await supabase.rpc("request_member_roles_change", { _member_id: member!.id, _roles: roles, _reason: why });
       if (error) throw error;
+      return data as RequestState;
     },
-    onSuccess: () => {
-      toast.success("Papéis atualizados.");
+    onSuccess: (state) => {
+      announceRequest(state, "Cargos alterados.");
       invalidate();
-      qc.invalidateQueries({ queryKey: ["memberships"] });
       onClose();
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
 
+  function submit() {
+    if (!roles.length) { toast.error("Indique pelo menos um papel."); return; }
+    const r = reasonSchema.safeParse(reason);
+    if (!r.success) { toast.error(r.error.issues[0]?.message ?? "Motivo inválido."); return; }
+    save.mutate(r.data);
+  }
+
   return (
     <Dialog open={!!member} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Papéis de {member?.full_name}</DialogTitle>
-          <DialogDescription>Um administrador que também é membro mantém um único registo.</DialogDescription>
+          <DialogTitle>Propor cargos para {member?.full_name}</DialogTitle>
+          <DialogDescription>
+            A alteração fica pendente até a direção aprovar. Um administrador que também é membro mantém um único registo.
+          </DialogDescription>
         </DialogHeader>
-        <RolePicker value={roles} onChange={setRoles} myRoles={myRoles} />
+        <RolePicker value={roles} onChange={setRoles} />
+        <ReasonField value={reason} onChange={setReason} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => (roles.length ? save.mutate() : toast.error("Indique pelo menos um papel."))} disabled={save.isPending}>
-            Guardar papéis
-          </Button>
+          <Button onClick={submit} disabled={save.isPending}>{save.isPending ? "A enviar…" : "Enviar proposta"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-const STATUS_COPY: Record<Exclude<MemberStatus, "convidado">, { title: string; body: string; action: string }> = {
+export type StatusTarget = { member: MemberRow; status: Exclude<MemberStatus, "convidado"> };
+
+const STATUS_COPY: Record<StatusTarget["status"], { title: string; body: string; action: string; done: string }> = {
   suspenso: {
-    title: "Suspender membro?",
-    body: "O membro deixa de aceder ao grupo até ser reativado. Os registos dele mantêm-se.",
-    action: "Suspender",
+    title: "Pedir suspensão",
+    body: "Se for aprovado, o membro deixa de aceder ao grupo até ser reativado. Os registos dele mantêm-se.",
+    action: "Pedir suspensão",
+    done: "Membro suspenso.",
   },
-  ativo: { title: "Reativar membro?", body: "O membro volta a ter acesso ao grupo.", action: "Reativar" },
+  ativo: {
+    title: "Pedir reativação",
+    body: "Se for aprovado, o membro volta a ter acesso ao grupo.",
+    action: "Pedir reativação",
+    done: "Membro reativado.",
+  },
   excluido: {
-    title: "Excluir membro?",
-    body: "A exclusão é definitiva: o membro perde o acesso e não pode ser reativado. O registo é mantido no histórico.",
-    action: "Excluir definitivamente",
+    title: "Pedir exclusão",
+    body: "Se for aprovado, a exclusão é definitiva: o membro perde o acesso e não pode ser reativado. O registo é mantido no histórico.",
+    action: "Pedir exclusão",
+    done: "Membro excluído.",
   },
 };
 
-export function StatusConfirm({
-  groupId,
-  target,
-  onClose,
-}: {
-  groupId: string;
-  target: { member: MemberRow; status: Exclude<MemberStatus, "convidado"> } | null;
-  onClose: () => void;
-}) {
+export function StatusRequestDialog({ groupId, target, onClose }: { groupId: string; target: StatusTarget | null; onClose: () => void }) {
+  const [reason, setReason] = useState("");
   const invalidate = useInvalidateMembers(groupId);
+  useEffect(() => {
+    if (target) setReason("");
+  }, [target]);
   const change = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.rpc("set_member_status", { _member_id: target!.member.id, _status: target!.status });
+    mutationFn: async (why: string) => {
+      const { data, error } = await supabase.rpc("request_member_status_change", {
+        _member_id: target!.member.id,
+        _status: target!.status,
+        _reason: why,
+      });
       if (error) throw error;
+      return data as RequestState;
     },
-    onSuccess: () => {
-      toast.success(`Estado alterado para “${STATUS_LABEL[target!.status]}”.`);
+    onSuccess: (state) => {
+      announceRequest(state, STATUS_COPY[target!.status].done);
       invalidate();
       onClose();
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
   const copy = target ? STATUS_COPY[target.status] : null;
+
+  function submit() {
+    const r = reasonSchema.safeParse(reason);
+    if (!r.success) { toast.error(r.error.issues[0]?.message ?? "Motivo inválido."); return; }
+    change.mutate(r.data);
+  }
+
   return (
-    <AlertDialog open={!!target} onOpenChange={(o) => !o && onClose()}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{copy?.title}</AlertDialogTitle>
-          <AlertDialogDescription>
+    <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{copy?.title}</DialogTitle>
+          <DialogDescription>
             <strong className="text-foreground">{target?.member.full_name}</strong> — {copy?.body}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault();
-              change.mutate();
-            }}
+          </DialogDescription>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground">
+          Precisa da aprovação da direção: com 1 administrador aplica-se logo; com 2, aprovam os dois; com 3 ou mais, aprovam o Diretor, o Tesoureiro e o Secretário.
+        </p>
+        <ReasonField value={reason} onChange={setReason} />
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button
+            onClick={submit}
             disabled={change.isPending}
-            className={target?.status === "excluido" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
+            variant={target?.status === "excluido" ? "destructive" : "default"}
           >
-            {copy?.action}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            {change.isPending ? "A enviar…" : copy?.action}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -32,6 +32,11 @@ const ACTION_LABEL: Record<string, string> = {
   estado_alterado: "Estado de membro alterado",
   papeis_alterados: "Papéis de membro alterados",
   convite_aceite: "Convite aceite",
+  pedido_criado: "Pedido à direção criado",
+  pedido_estado_criado: "Pedido à direção criado",
+  pedido_estado_aprovado: "Voto a favor de um pedido",
+  pedido_estado_rejeitado: "Voto contra um pedido",
+  pedido_estado_cancelado: "Pedido cancelado",
 };
 
 function ActivityPage() {

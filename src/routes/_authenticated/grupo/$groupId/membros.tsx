@@ -2,20 +2,28 @@ import { createFileRoute } from "@tanstack/react-router";
 import { keepPreviousData, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { EyeOff, MoreHorizontal, Phone, Plus, Search } from "lucide-react";
-import { groupQuery, membersQuery, PAGE_SIZE, type MemberRow } from "@/lib/queries";
+import { boardRequestsQuery, groupQuery, membersPrivateQuery, membersQuery, PAGE_SIZE, type MemberRow } from "@/lib/queries";
 import { useGroupAccess } from "@/lib/use-group-access";
 import {
   STATUS_LABEL,
-  allowedStatusChanges,
-  canAssignRoles,
+  allowedStatusRequests,
   canManageMembers,
+  canProposeRoles,
   isAdmin,
+  isRecordIncomplete,
   type MemberStatus,
 } from "@/lib/roles";
 import { initials } from "@/lib/format";
 import { PageHeader, EmptyState } from "@/components/app/PageHeader";
 import { RoleBadges, StatusBadge } from "@/components/app/badges";
-import { AddMemberDialog, EditMemberDialog, RolesDialog, StatusConfirm } from "@/components/app/MemberDialogs";
+import {
+  AddMemberDialog,
+  EditMemberDialog,
+  ProposeRolesDialog,
+  StatusRequestDialog,
+  type StatusTarget,
+} from "@/components/app/MemberDialogs";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,7 +52,6 @@ export const Route = createFileRoute("/_authenticated/grupo/$groupId/membros")({
 });
 
 type StatusFilter = MemberStatus | "todos";
-type StatusTarget = { member: MemberRow; status: Exclude<MemberStatus, "convidado"> };
 
 function MembersPage() {
   const { groupId } = Route.useParams();
@@ -79,6 +86,22 @@ function MembersPage() {
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const directoryHidden = !admin && !group?.member_directory_visible;
+  const ids = rows.map((r) => r.id);
+  const privateData = useQuery({ ...membersPrivateQuery(groupId, ids), enabled: admin && ids.length > 0 });
+  const requests = useQuery({ ...boardRequestsQuery(groupId), enabled: admin });
+  const pendingFor = new Set((requests.data ?? []).map((r) => r.member_id));
+  const incomplete = (m: MemberRow) => {
+    if (!admin || !privateData.data) return false;
+    const p = privateData.data.find((x) => x.member_id === m.id);
+    return isRecordIncomplete({
+      phone: m.phone,
+      profession: m.profession,
+      id_document_type: p?.id_document_type ?? null,
+      id_document_number: p?.id_document_number ?? null,
+      birth_date: p?.birth_date ?? null,
+      address: p?.address ?? null,
+    });
+  };
 
   return (
     <div>
@@ -156,13 +179,18 @@ function MembersPage() {
           <ul className="divide-y">
             {rows.map((m) => {
               const isSelf = m.user_id === user.id;
-              const statusOptions = allowedStatusChanges({
-                myRoles: roles,
-                targetRoles: m.roles,
-                targetStatus: m.status,
-                isSelf,
-              });
-              const showMenu = manage;
+              const pending = pendingFor.has(m.id);
+              const statusOptions = pending
+                ? []
+                : allowedStatusRequests({ myRoles: roles, targetStatus: m.status, isSelf });
+              const proposeRoles = !pending && canProposeRoles({ myRoles: roles, targetStatus: m.status, isSelf });
+              const showMenu = admin;
+              const flags = (
+                <>
+                  {pending ? <Badge variant="gold">Pedido pendente</Badge> : null}
+                  {incomplete(m) ? <Badge variant="warning">Cadastro incompleto</Badge> : null}
+                </>
+              );
               return (
                 <li key={m.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
                   <span className="hidden size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground sm:flex">
@@ -172,6 +200,7 @@ function MembersPage() {
                     <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="truncate font-semibold text-foreground">{m.full_name}</span>
                       {isSelf ? <span className="text-xs text-muted-foreground">(eu)</span> : null}
+                      <span className="hidden flex-wrap gap-1 md:flex">{flags}</span>
                     </p>
                     <p className="mt-0.5 flex flex-wrap gap-x-3 text-sm text-muted-foreground">
                       {m.phone ? (
@@ -184,6 +213,7 @@ function MembersPage() {
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 md:hidden">
                       <RoleBadges roles={m.roles} />
                       {admin ? <StatusBadge status={m.status} /> : null}
+                      {flags}
                     </div>
                   </div>
                   <div className="hidden w-56 md:block">
@@ -202,9 +232,14 @@ function MembersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setEditing(m)}>Editar dados</DropdownMenuItem>
-                        {canAssignRoles(roles) ? (
-                          <DropdownMenuItem onSelect={() => setRolesFor(m)}>Alterar papéis</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setEditing(m)}>
+                          {manage ? "Editar dados" : "Ver dados"}
+                        </DropdownMenuItem>
+                        {proposeRoles ? (
+                          <DropdownMenuItem onSelect={() => setRolesFor(m)}>Propor cargos</DropdownMenuItem>
+                        ) : null}
+                        {pending ? (
+                          <DropdownMenuItem disabled>Já tem um pedido pendente</DropdownMenuItem>
                         ) : null}
                         {statusOptions.length > 0 ? <DropdownMenuSeparator /> : null}
                         {statusOptions.map((s) => (
@@ -213,7 +248,7 @@ function MembersPage() {
                             onSelect={() => setStatusTarget({ member: m, status: s as StatusTarget["status"] })}
                             className={s === "excluido" ? "text-destructive focus:text-destructive" : undefined}
                           >
-                            {s === "ativo" ? "Reativar" : s === "suspenso" ? "Suspender" : "Excluir"}
+                            {s === "ativo" ? "Pedir reativação" : s === "suspenso" ? "Pedir suspensão" : "Pedir exclusão"}
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
@@ -242,12 +277,12 @@ function MembersPage() {
         </div>
       ) : null}
 
-      {manage ? (
+      {manage ? <AddMemberDialog groupId={groupId} open={adding} onOpenChange={setAdding} /> : null}
+      {admin ? (
         <>
-          <AddMemberDialog groupId={groupId} myRoles={roles} open={adding} onOpenChange={setAdding} />
-          <EditMemberDialog groupId={groupId} member={editing} onClose={() => setEditing(null)} />
-          <RolesDialog groupId={groupId} member={rolesFor} myRoles={roles} onClose={() => setRolesFor(null)} />
-          <StatusConfirm groupId={groupId} target={statusTarget} onClose={() => setStatusTarget(null)} />
+          <EditMemberDialog groupId={groupId} member={editing} readOnly={!manage} onClose={() => setEditing(null)} />
+          <ProposeRolesDialog groupId={groupId} member={rolesFor} onClose={() => setRolesFor(null)} />
+          <StatusRequestDialog groupId={groupId} target={statusTarget} onClose={() => setStatusTarget(null)} />
         </>
       ) : null}
     </div>

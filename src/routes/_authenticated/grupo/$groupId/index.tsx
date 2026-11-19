@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Mail, MapPin, Phone, Users, UserPlus, UserMinus, ArrowRight } from "lucide-react";
-import { groupQuery, groupStatsQuery } from "@/lib/queries";
+import { boardRequestsQuery, groupQuery, groupStatsQuery } from "@/lib/queries";
 import { useGroupAccess } from "@/lib/use-group-access";
 import { isAdmin, canManageMembers } from "@/lib/roles";
 import { formatDate } from "@/lib/format";
@@ -29,11 +29,27 @@ function GroupHome() {
   const { membership, roles } = useGroupAccess(user.id, groupId);
   const admin = isAdmin(roles);
   const stats = useQuery({ ...groupStatsQuery(groupId), enabled: admin });
+  const requests = useQuery({ ...boardRequestsQuery(groupId), enabled: admin });
+  const awaitingMe = (requests.data ?? []).filter(
+    (r) => r.member_id !== membership?.id && !r.votes.some((v) => v.voter_member_id === membership?.id),
+  ).length;
 
   if (!group || !membership) return null;
 
   return (
     <div className="space-y-6">
+      {admin && awaitingMe > 0 ? (
+        <Card className="flex flex-col gap-3 border-gold/60 bg-gold/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-medium text-foreground">
+            {awaitingMe === 1 ? "1 pedido da direção aguarda o seu voto." : `${awaitingMe} pedidos da direção aguardam o seu voto.`}
+          </p>
+          <Button asChild size="sm">
+            <Link to="/grupo/$groupId/direcao" params={{ groupId }}>
+              Ver pedidos <ArrowRight />
+            </Link>
+          </Button>
+        </Card>
+      ) : null}
       {admin ? (
         <div className="grid gap-3 sm:grid-cols-3">
           <Stat icon={Users} label="Membros ativos" value={stats.data?.ativo} />

@@ -163,3 +163,104 @@ export const platformGroupsQuery = () =>
       return data ?? [];
     },
   });
+
+/** Dados sensíveis dos membros listados (só a direção os lê; usado para marcar cadastros incompletos). */
+export const membersPrivateQuery = (groupId: string, ids: string[]) =>
+  queryOptions({
+    queryKey: ["members-private", groupId, ids],
+    queryFn: async () => {
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("member_private_data")
+        .select("member_id, id_document_type, id_document_number, birth_date, address")
+        .in("member_id", ids);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+export type BoardMember = { member_id: string; full_name: string; roles: GroupRole[] };
+
+/** Direção atual do grupo (visível a todos os membros ativos). */
+export const boardQuery = (groupId: string) =>
+  queryOptions({
+    queryKey: ["board", groupId],
+    queryFn: async (): Promise<BoardMember[]> => {
+      const { data, error } = await supabase.rpc("group_board", { _group_id: groupId });
+      if (error) throw error;
+      return (data ?? []) as BoardMember[];
+    },
+  });
+
+/** Histórico de cargos da direção (visível a todos os membros ativos). */
+export const adminHistoryQuery = (groupId: string, page: number) =>
+  queryOptions({
+    queryKey: ["admin-history", groupId, page],
+    queryFn: async () => {
+      const from = page * PAGE_SIZE;
+      const { data, error, count } = await supabase
+        .from("admin_role_history")
+        .select("id, member_name, role, action, actor_label, created_at", { count: "exact" })
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      return { rows: data ?? [], total: count ?? 0 };
+    },
+  });
+
+export type BoardRequest = {
+  id: string;
+  member_id: string;
+  member_name: string;
+  kind: "estado" | "papeis";
+  from_status: MemberStatus | null;
+  requested_status: MemberStatus | null;
+  from_roles: GroupRole[];
+  requested_roles: GroupRole[];
+  reason: string;
+  requested_by: string;
+  requester_name: string;
+  created_at: string;
+  votes: { voter_member_id: string; voter_name: string; vote: "aprovado" | "rejeitado"; reason: string | null }[];
+};
+
+/** Pedidos pendentes da direção (só administradores os leem). */
+export const boardRequestsQuery = (groupId: string) =>
+  queryOptions({
+    queryKey: ["board-requests", groupId],
+    queryFn: async (): Promise<BoardRequest[]> => {
+      const { data, error } = await supabase
+        .from("member_status_requests")
+        .select(
+          `id, member_id, kind, from_status, requested_status, from_roles, requested_roles, reason, requested_by, created_at,
+           target:group_members!member_status_requests_member_id_fkey(full_name),
+           requester:group_members!member_status_requests_requested_by_member_fkey(full_name),
+           member_status_request_votes(voter_member_id, vote, reason, voter:group_members!member_status_request_votes_voter_member_id_fkey(full_name))`,
+        )
+        .eq("group_id", groupId)
+        .eq("status", "pendente")
+        .order("created_at");
+      if (error) throw error;
+      return (data ?? []).map((r) => ({
+        id: r.id,
+        member_id: r.member_id,
+        member_name: r.target?.full_name ?? "—",
+        kind: r.kind as BoardRequest["kind"],
+        from_status: r.from_status,
+        requested_status: r.requested_status,
+        from_roles: r.from_roles ?? [],
+        requested_roles: r.requested_roles ?? [],
+        reason: r.reason,
+        requested_by: r.requested_by,
+        requester_name: r.requester?.full_name ?? "—",
+        created_at: r.created_at,
+        votes: (r.member_status_request_votes ?? []).map((v) => ({
+          voter_member_id: v.voter_member_id,
+          voter_name: v.voter?.full_name ?? "—",
+          vote: v.vote,
+          reason: v.reason,
+        })),
+      }));
+    },
+  });
