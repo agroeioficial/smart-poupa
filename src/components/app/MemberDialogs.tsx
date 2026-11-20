@@ -85,7 +85,7 @@ function RolePicker({ value, onChange }: { value: GroupRole[]; onChange: (r: Gro
 
 type PrivateDefaults = { id_document_type?: string | null; id_document_number?: string | null; birth_date?: string | null; address?: string | null };
 
-function PrivateFields({ defaults, readOnly }: { defaults?: PrivateDefaults; readOnly?: boolean }) {
+function PrivateFields({ defaults, readOnly }: { defaults?: PrivateDefaults | undefined; readOnly?: boolean | undefined }) {
   const today = new Date().toISOString().slice(0, 10);
   return (
     <fieldset className="space-y-3 rounded-lg border border-dashed p-4">
@@ -183,7 +183,7 @@ export function AddMemberDialog({ groupId, open, onOpenChange }: { groupId: stri
 }
 
 /** Editar (Diretor, Secretário) ou só consultar (Tesoureiro) os dados de um membro. */
-export function EditMemberDialog({ groupId, member, readOnly, onClose }: { groupId: string; member: MemberRow | null; readOnly?: boolean; onClose: () => void }) {
+export function EditMemberDialog({ groupId, member, readOnly, onClose }: { groupId: string; member: MemberRow | null; readOnly?: boolean | undefined; onClose: () => void }) {
   const invalidate = useInvalidateMembers(groupId);
   const qc = useQueryClient();
   const priv = useQuery({ ...memberPrivateQuery(member?.id ?? ""), enabled: !!member });
