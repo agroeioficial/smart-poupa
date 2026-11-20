@@ -4,6 +4,7 @@ import { ChevronLeft, ShieldAlert } from "lucide-react";
 import { groupQuery, myMembershipsQuery } from "@/lib/queries";
 import { useGroupAccess } from "@/lib/use-group-access";
 import { canEditSettings } from "@/lib/roles";
+import { showMyGroups } from "@/lib/navigation";
 import { RoleBadges } from "@/components/app/badges";
 import { Button } from "@/components/ui/button";
 
@@ -22,6 +23,8 @@ function GroupLayout() {
   const { user } = Route.useRouteContext();
   const { data: group } = useSuspenseQuery(groupQuery(groupId));
   const { membership, roles } = useGroupAccess(user.id, groupId);
+  const { data: memberships } = useSuspenseQuery(myMembershipsQuery(user.id));
+  const myGroups = showMyGroups(memberships, false);
 
   if (!group || !membership) {
     return (
@@ -30,7 +33,7 @@ function GroupLayout() {
         <h1 className="text-xl font-bold">Grupo indisponível</h1>
         <p className="mt-1 text-sm text-muted-foreground">Não tem acesso a este grupo ou ele não existe.</p>
         <Button asChild variant="outline" className="mt-6">
-          <Link to="/painel">Voltar aos meus grupos</Link>
+          <Link to="/painel">Voltar ao início</Link>
         </Button>
       </main>
     );
@@ -48,10 +51,12 @@ function GroupLayout() {
     <div>
       <div className="border-b bg-surface">
         <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
-          <Link to="/painel" className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="size-3.5" /> Os meus grupos
-          </Link>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {myGroups ? (
+            <Link to="/painel" className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+              <ChevronLeft className="size-3.5" /> Os meus grupos
+            </Link>
+          ) : null}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="truncate text-xl font-bold text-foreground sm:text-2xl">{group.name}</h1>
             <RoleBadges roles={roles} />
           </div>

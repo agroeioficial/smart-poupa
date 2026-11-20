@@ -38,3 +38,5 @@ use the editor.
 - Confirmed records are never physically deleted; members change status instead. Why: audit and integrity rules of the spec.
 - `src/lib/roles.ts` mirrors the database permission rules for the UI only; keep both in sync and cover changes in `src/test/roles.test.ts` and `scripts/test-rls-fase1.ts` (live DB isolation test with throwaway `@exemplo.test` accounts).
 - The signed-in area is `src/routes/_authenticated/` (client-only, `ssr: false`); reads use the browser Supabase client under RLS. Why: the session lives in browser storage.
+- Accounts are created only through invitations: `src/lib/invites.functions.ts` checks the caller's role with their own session, then uses the service-role client to send the Supabase invite (new person) or magic link (existing account) to `/convite`, which accepts pending invites and asks only for a password. There is no public sign-up screen. Why: the group's administration registers members; members never create accounts.
+- Server functions get the browser session through `src/lib/auth-attacher.ts`, registered as `functionMiddleware` in `src/start.ts`. Why: `requireSupabaseAuth` needs the bearer token.

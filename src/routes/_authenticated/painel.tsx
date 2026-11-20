@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowRight, Building2, MailOpen, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { myMembershipsQuery, platformOwnerQuery } from "@/lib/queries";
+import { singleGroupId } from "@/lib/navigation";
 import { errorMessage } from "@/lib/format";
 import { PageHeader, EmptyState } from "@/components/app/PageHeader";
 import { RoleBadges, StatusBadge } from "@/components/app/badges";
@@ -22,10 +23,15 @@ export const Route = createFileRoute("/_authenticated/painel")({
     ],
   }),
   loader: async ({ context }) => {
-    await Promise.all([
+    const [memberships, isOwner] = await Promise.all([
       context.queryClient.ensureQueryData(myMembershipsQuery(context.user.id)),
       context.queryClient.ensureQueryData(platformOwnerQuery(context.user.id)),
     ]);
+    // A AGROEI não participa em poupança: vai direto à sua área.
+    if (isOwner) throw redirect({ to: "/agroei", replace: true });
+    // Quem pertence a um único grupo entra direto nesse grupo.
+    const single = singleGroupId(memberships);
+    if (single) throw redirect({ to: "/grupo/$groupId", params: { groupId: single }, replace: true });
   },
   component: Painel,
 });

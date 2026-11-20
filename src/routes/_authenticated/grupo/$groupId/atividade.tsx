@@ -33,6 +33,7 @@ const ACTION_LABEL: Record<string, string> = {
   papeis_alterados: "Papéis de membro alterados",
   convite_aceite: "Convite aceite",
   pedido_criado: "Pedido à direção criado",
+  convite_enviado: "Convite enviado por email",
   pedido_estado_criado: "Pedido à direção criado",
   pedido_estado_aprovado: "Voto a favor de um pedido",
   pedido_estado_rejeitado: "Voto contra um pedido",

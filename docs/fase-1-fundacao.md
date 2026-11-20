@@ -39,10 +39,16 @@ Data: 18/11/2026 · Referência: Manual Mestre v1.0, secções 15 e 18.2
 - `src/test/roles.test.ts` — 9 regras de permissões da interface.
 - Teste no navegador: entrada, aceitar convite, cadastrar membro, definições, atividade, Área AGROEI (computador) e vista de membro (telemóvel).
 
-## Decisões pendentes da AGROEI
-1. Quem pode ver os dados sensíveis: hoje Diretor e Secretário (o manual diz que o Secretário gere o cadastro mas não vê "documentos sensíveis").
-2. Campos obrigatórios do cadastro e se o documento de identificação deve ser recolhido.
-3. Suspensão/exclusão: confirmar que o Secretário pode suspender membros comuns e que a exclusão é definitiva.
-4. Lista de membros: começa desativada em cada grupo (opção do manual) — confirmar.
-5. Substituição de administradores ausentes (secção 17).
-6. Configuração do email de confirmação de conta e dos endereços autorizados no Supabase.
+## Decisões da AGROEI aplicadas (18–20/11/2026)
+1. Dados sensíveis: Diretor, Secretário e Tesoureiro (o Tesoureiro só consulta).
+2. Cadastro: nome, contacto, email, profissão, documento (tipo e número), data de nascimento e morada são obrigatórios.
+3. Suspensão, exclusão, reativação e promoção a administrador: pedido de qualquer administrador com motivo; 1 administrador decide sozinho, 2 aprovam os dois, 3 ou mais aprovam o Diretor, o Tesoureiro e o Secretário; uma rejeição encerra o pedido.
+4. Lista de membros começa desativada em cada grupo.
+5. Histórico da direção visível a todos os membros do grupo (separador "Direção").
+6. Ninguém cria conta: a direção cadastra e o convite segue por email; o link aceita o convite e pede só a palavra-passe.
+7. A AGROEI não vê "Os meus grupos"; quem pertence a um só grupo entra direto nele.
+
+## Pendente (ação da AGROEI no Supabase)
+- Configurar um servidor de email próprio (SMTP) — o envio incluído no Supabase é muito limitado (poucos emails por hora).
+- Autorizar os endereços da aplicação para convites (`/convite`) e desativar o registo público de contas.
+- Substituição de administradores ausentes (secção 17) — regras de prazo ainda por definir.

@@ -21,6 +21,7 @@ import {
   EditMemberDialog,
   ProposeRolesDialog,
   StatusRequestDialog,
+  useSendInvite,
   type StatusTarget,
 } from "@/components/app/MemberDialogs";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,7 @@ function MembersPage() {
   const [editing, setEditing] = useState<MemberRow | null>(null);
   const [rolesFor, setRolesFor] = useState<MemberRow | null>(null);
   const [statusTarget, setStatusTarget] = useState<StatusTarget | null>(null);
+  const resend = useSendInvite(groupId);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -235,6 +237,11 @@ function MembersPage() {
                         <DropdownMenuItem onSelect={() => setEditing(m)}>
                           {manage ? "Editar dados" : "Ver dados"}
                         </DropdownMenuItem>
+                        {manage && m.status === "convidado" ? (
+                          <DropdownMenuItem disabled={resend.isPending} onSelect={() => resend.mutate(m.id)}>
+                            Reenviar convite
+                          </DropdownMenuItem>
+                        ) : null}
                         {proposeRoles ? (
                           <DropdownMenuItem onSelect={() => setRolesFor(m)}>Propor cargos</DropdownMenuItem>
                         ) : null}

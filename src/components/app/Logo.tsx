@@ -13,7 +13,7 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-export function Logo({ to = "/", className, light = false }: { to?: "/" | "/painel"; className?: string; light?: boolean }) {
+export function Logo({ to = "/", className, light = false }: { to?: "/" | "/painel" | "/agroei"; className?: string; light?: boolean }) {
   return (
     <Link to={to} className={cn("flex items-center gap-2.5", className)} aria-label="SMART POUPA — início">
       <LogoMark />

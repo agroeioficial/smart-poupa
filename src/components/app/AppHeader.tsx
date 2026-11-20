@@ -2,7 +2,8 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { LogOut, LayoutGrid, Building2, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { platformOwnerQuery } from "@/lib/queries";
+import { myMembershipsQuery, platformOwnerQuery } from "@/lib/queries";
+import { showMyGroups } from "@/lib/navigation";
 import { initials } from "@/lib/format";
 import { Logo } from "./Logo";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ export function AppHeader({ userId, email, name }: { userId: string; email: stri
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: isOwner } = useQuery(platformOwnerQuery(userId));
+  const { data: memberships } = useQuery(myMembershipsQuery(userId));
+  const myGroups = showMyGroups(memberships ?? [], !!isOwner);
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -32,13 +35,15 @@ export function AppHeader({ userId, email, name }: { userId: string; email: stri
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <Logo to="/painel" />
+        <Logo to={isOwner ? "/agroei" : "/painel"} />
         <div className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-            <Link to="/painel" activeProps={{ className: "bg-accent text-accent-foreground" }}>
-              <LayoutGrid /> Os meus grupos
-            </Link>
-          </Button>
+          {myGroups ? (
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Link to="/painel" activeProps={{ className: "bg-accent text-accent-foreground" }}>
+                <LayoutGrid /> Os meus grupos
+              </Link>
+            </Button>
+          ) : null}
           {isOwner ? (
             <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
               <Link to="/agroei" activeProps={{ className: "bg-accent text-accent-foreground" }}>
@@ -61,11 +66,13 @@ export function AppHeader({ userId, email, name }: { userId: string; email: stri
                 <span className="block truncate text-xs text-muted-foreground">{email}</span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/painel">
-                  <LayoutGrid /> Os meus grupos
-                </Link>
-              </DropdownMenuItem>
+              {myGroups ? (
+                <DropdownMenuItem asChild>
+                  <Link to="/painel">
+                    <LayoutGrid /> Os meus grupos
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
               {isOwner ? (
                 <DropdownMenuItem asChild>
                   <Link to="/agroei">

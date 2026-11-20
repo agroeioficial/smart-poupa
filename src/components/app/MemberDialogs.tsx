@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { sendMemberInvite } from "@/lib/invites.functions";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +49,20 @@ export function useInvalidateMembers(groupId: string) {
     }
     qc.invalidateQueries({ queryKey: ["memberships"] });
   };
+}
+
+/** Envia (ou reenvia) o convite por email a um membro cadastrado. */
+export function useSendInvite(groupId: string) {
+  const send = useServerFn(sendMemberInvite);
+  const invalidate = useInvalidateMembers(groupId);
+  return useMutation({
+    mutationFn: (memberId: string) => send({ data: { memberId, origin: window.location.origin } }),
+    onSuccess: () => {
+      toast.success("Convite enviado por email.");
+      invalidate();
+    },
+    onError: (e) => toast.error(`O convite não foi enviado: ${errorMessage(e)}`),
+  });
 }
 
 export function announceRequest(state: RequestState, applied: string) {
@@ -109,10 +125,11 @@ export function AddMemberDialog({ groupId, open, onOpenChange }: { groupId: stri
     if (open) setRoles(["membro"]);
   }, [open]);
   const proposesAdmin = roles.some((r) => r !== "membro");
+  const send = useServerFn(sendMemberInvite);
 
   const add = useMutation({
     mutationFn: async (v: z.infer<typeof addSchema>) => {
-      const { error } = await supabase.rpc("add_group_member", {
+      const { data: memberId, error } = await supabase.rpc("add_group_member", {
         _group_id: groupId,
         _full_name: v.full_name,
         _email: v.email,
@@ -125,13 +142,23 @@ export function AddMemberDialog({ groupId, open, onOpenChange }: { groupId: stri
         _address: v.address,
       });
       if (error) throw error;
+      try {
+        await send({ data: { memberId: memberId as string, origin: window.location.origin } });
+        return { email: v.email, inviteError: null as string | null };
+      } catch (e) {
+        return { email: v.email, inviteError: errorMessage(e) };
+      }
     },
-    onSuccess: () => {
-      toast.success(
-        proposesAdmin
-          ? "Membro cadastrado como “Convidado”. O cargo administrativo segue a aprovação da direção (veja “Direção”)."
-          : "Membro cadastrado. Fica como “Convidado” até entrar com o email indicado e aceitar.",
-      );
+    onSuccess: ({ email, inviteError }) => {
+      if (inviteError) {
+        toast.warning(`Membro cadastrado, mas o convite não foi enviado: ${inviteError} Use “Reenviar convite” na lista.`, { duration: 10000 });
+      } else {
+        toast.success(
+          `Membro cadastrado. O convite foi enviado para ${email}.` +
+            (proposesAdmin ? " O cargo administrativo segue a aprovação da direção." : ""),
+          { duration: 8000 },
+        );
+      }
       invalidate();
       onOpenChange(false);
     },
@@ -157,7 +184,7 @@ export function AddMemberDialog({ groupId, open, onOpenChange }: { groupId: stri
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
           <Field id="m-name" name="full_name" label="Nome completo" required />
-          <Field id="m-email" name="email" type="email" label="Email" required hint="Usado para o membro entrar na sua própria conta. Não é mostrado aos outros membros." />
+          <Field id="m-email" name="email" type="email" label="Email" required hint="O convite é enviado para este email. O membro só define a palavra-passe. Não é mostrado aos outros membros." />
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="m-phone" name="phone" type="tel" label="Contacto" required />
             <Field id="m-prof" name="profession" label="Profissão" required />

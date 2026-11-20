@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { sendMemberInvite } from "@/lib/invites.functions";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Plus, ShieldAlert } from "lucide-react";
+import { Mail, Plus, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { platformGroupsQuery, platformOwnerQuery } from "@/lib/queries";
 import { errorMessage, formatDate } from "@/lib/format";
@@ -51,7 +53,7 @@ function AgroeiPage() {
         <h1 className="text-xl font-bold">Sem acesso</h1>
         <p className="mt-1 text-sm text-muted-foreground">Esta área é reservada à AGROEI.</p>
         <Button asChild variant="outline" className="mt-6">
-          <Link to="/painel">Voltar aos meus grupos</Link>
+          <Link to="/painel">Voltar ao início</Link>
         </Button>
       </main>
     );
@@ -95,6 +97,7 @@ function OwnerArea() {
                   <th className="hidden px-4 py-3 font-semibold md:table-cell">Contacto oficial</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="hidden px-4 py-3 font-semibold sm:table-cell">Criado em</th>
+                  <th className="px-4 py-3"><span className="sr-only">Ações</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -111,6 +114,9 @@ function OwnerArea() {
                       </Badge>
                     </td>
                     <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{formatDate(g.created_at)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <ResendDirectorInvite groupId={g.id} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -132,12 +138,27 @@ const groupSchema = z.object({
   director_phone: z.string().trim().max(30),
 });
 
+function ResendDirectorInvite({ groupId }: { groupId: string }) {
+  const send = useServerFn(sendMemberInvite);
+  const resend = useMutation({
+    mutationFn: () => send({ data: { groupId, origin: window.location.origin } }),
+    onSuccess: () => toast.success("Convite reenviado ao Diretor."),
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  return (
+    <Button variant="ghost" size="sm" onClick={() => resend.mutate()} disabled={resend.isPending} title="Reenviar convite ao Diretor">
+      <Mail /> <span className="hidden lg:inline">Reenviar convite</span>
+    </Button>
+  );
+}
+
 function NewGroupDialog() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const send = useServerFn(sendMemberInvite);
   const create = useMutation({
     mutationFn: async (v: z.infer<typeof groupSchema>) => {
-      const { error } = await supabase.rpc("create_group", {
+      const { data: groupId, error } = await supabase.rpc("create_group", {
         _name: v.name,
         _location: v.location,
         _official_phone: v.official_phone,
@@ -147,9 +168,16 @@ function NewGroupDialog() {
         _director_phone: v.director_phone,
       });
       if (error) throw error;
+      try {
+        await send({ data: { groupId: groupId as string, origin: window.location.origin } });
+        return { email: v.director_email, inviteError: null as string | null };
+      } catch (e) {
+        return { email: v.director_email, inviteError: errorMessage(e) };
+      }
     },
-    onSuccess: () => {
-      toast.success("Grupo criado. O Diretor verá o convite ao entrar com o email indicado.");
+    onSuccess: ({ email, inviteError }) => {
+      if (inviteError) toast.warning(`Grupo criado, mas o convite não foi enviado: ${inviteError} Use “Reenviar convite”.`, { duration: 10000 });
+      else toast.success(`Grupo criado. O convite foi enviado para ${email}.`, { duration: 8000 });
       queryClient.invalidateQueries({ queryKey: ["platform-groups"] });
       setOpen(false);
     },
@@ -195,7 +223,7 @@ function NewGroupDialog() {
               <F id="d-phone" name="director_phone" label="Contacto" type="tel" />
             </div>
             <p className="text-xs text-muted-foreground">
-              O Diretor recebe acesso ao entrar na SMART POUPA com este email e aceitar o convite.
+              O Diretor recebe o convite neste email; ao abri-lo, só define a palavra-passe.
             </p>
           </fieldset>
           <DialogFooter>
