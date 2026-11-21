@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { GroupRole, MemberStatus } from "./roles";
+import type { GroupRole, MemberStatus, RelationType } from "./roles";
 
 export type Membership = {
   id: string;
@@ -71,6 +71,7 @@ export type MemberRow = {
   joined_at: string | null;
   created_at: string;
   roles: GroupRole[];
+  collective_profile_id: string | null;
 };
 
 export const membersQuery = (groupId: string, search: string, status: MemberStatus | "todos", page: number) =>
@@ -79,7 +80,7 @@ export const membersQuery = (groupId: string, search: string, status: MemberStat
     queryFn: async () => {
       let q = supabase
         .from("group_members")
-        .select("id, full_name, phone, profession, status, user_id, joined_at, created_at, group_member_roles(role)", {
+        .select("id, full_name, phone, profession, status, user_id, joined_at, created_at, collective_profile_id, group_member_roles(role)", {
           count: "exact",
         })
         .eq("group_id", groupId);
@@ -98,6 +99,7 @@ export const membersQuery = (groupId: string, search: string, status: MemberStat
         joined_at: m.joined_at,
         created_at: m.created_at,
         roles: (m.group_member_roles ?? []).map((r) => r.role),
+        collective_profile_id: m.collective_profile_id,
       }));
       return { rows, total: count ?? 0 };
     },
@@ -213,7 +215,7 @@ export type BoardRequest = {
   id: string;
   member_id: string;
   member_name: string;
-  kind: "estado" | "papeis";
+  kind: "estado" | "papeis" | "admissao";
   from_status: MemberStatus | null;
   requested_status: MemberStatus | null;
   from_roles: GroupRole[];
@@ -262,5 +264,78 @@ export const boardRequestsQuery = (groupId: string) =>
           reason: v.reason,
         })),
       }));
+    },
+  });
+
+/** Avisos do grupo (ex.: novo membro admitido), visíveis a todos os membros ativos. */
+export const groupEventsQuery = (groupId: string) =>
+  queryOptions({
+    queryKey: ["group-events", groupId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("group_events")
+        .select("id, kind, member_name, created_at")
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false })
+        .limit(8);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+export type CollectiveProfile = { id: string; name: string; relation_type: RelationType; member_count: number };
+
+/** Perfis coletivos do grupo com o número de integrantes ativos. */
+export const collectiveProfilesQuery = (groupId: string) =>
+  queryOptions({
+    queryKey: ["collective-profiles", groupId],
+    queryFn: async (): Promise<CollectiveProfile[]> => {
+      const { data, error } = await supabase.rpc("group_collective_profiles", { _group_id: groupId });
+      if (error) throw error;
+      return (data ?? []) as CollectiveProfile[];
+    },
+  });
+
+export const collectiveMembersQuery = (groupId: string, profileId: string) =>
+  queryOptions({
+    queryKey: ["collective-members", groupId, profileId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("group_members")
+        .select("id, full_name, phone, profession")
+        .eq("collective_profile_id", profileId)
+        .eq("status", "ativo")
+        .order("full_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+/** Beneficiário por morte (só o próprio e a direção o leem). */
+export const beneficiaryQuery = (memberId: string) =>
+  queryOptions({
+    queryKey: ["beneficiary", memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("member_beneficiaries")
+        .select("full_name, relationship, phone, document_type, document_number, updated_at")
+        .eq("member_id", memberId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+export const beneficiaryHistoryQuery = (memberId: string) =>
+  queryOptions({
+    queryKey: ["beneficiary-history", memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("member_beneficiary_history")
+        .select("id, full_name, relationship, document_type, created_at")
+        .eq("member_id", memberId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
     },
   });

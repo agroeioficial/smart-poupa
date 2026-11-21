@@ -7,6 +7,7 @@ import { canEditSettings } from "@/lib/roles";
 import { showMyGroups } from "@/lib/navigation";
 import { RoleBadges } from "@/components/app/badges";
 import { Button } from "@/components/ui/button";
+import { WaitingApproval } from "@/components/app/GovernanceParts";
 
 export const Route = createFileRoute("/_authenticated/grupo/$groupId")({
   loader: async ({ context, params }) => {
@@ -25,6 +26,15 @@ function GroupLayout() {
   const { membership, roles } = useGroupAccess(user.id, groupId);
   const { data: memberships } = useSuspenseQuery(myMembershipsQuery(user.id));
   const myGroups = showMyGroups(memberships, false);
+
+  const waiting = memberships.find((m) => m.group_id === groupId && m.status === "pendente_aprovacao");
+  if (!membership && waiting) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <WaitingApproval groupName={waiting.group?.name ?? group?.name ?? "do grupo"} />
+      </main>
+    );
+  }
 
   if (!group || !membership) {
     return (

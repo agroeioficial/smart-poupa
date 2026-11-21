@@ -92,6 +92,22 @@ describe("Aprovação da direção", () => {
   });
 });
 
+describe("Admissão de novo membro (unânime)", () => {
+  const eligible = [adm("d", "diretor"), adm("t", "tesoureiro"), adm("s", "secretario"), adm("s2", "secretario")];
+  it("os três principais não chegam: todos têm de aprovar", () => {
+    expect(approvalProgress({ eligible, approvals: ["d", "t", "s"], rejected: false, unanimous: true }).state).toBe("pendente");
+  });
+  it("com todos os administradores a admissão é aprovada", () => {
+    expect(approvalProgress({ eligible, approvals: ["d", "t", "s", "s2"], rejected: false, unanimous: true }).state).toBe("aprovado");
+  });
+  it("uma rejeição rejeita a admissão", () => {
+    expect(approvalProgress({ eligible, approvals: ["d", "t", "s"], rejected: true, unanimous: true }).state).toBe("rejeitado");
+  });
+  it("quem aguarda admissão não pode ser alvo de outros pedidos", () => {
+    expect(allowedStatusRequests({ myRoles: ["diretor"], targetStatus: "pendente_aprovacao", isSelf: false })).toEqual([]);
+  });
+});
+
 describe("Cadastro obrigatório", () => {
   const full = { phone: "84", profession: "Agricultor", id_document_type: "BI", id_document_number: "1", birth_date: "1990-01-01", address: "Rua" };
   it("cadastro completo não fica marcado", () => {

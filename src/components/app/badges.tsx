@@ -4,6 +4,7 @@ import { ROLE_LABEL, STATUS_LABEL, sortRoles, type GroupRole, type MemberStatus 
 const STATUS_VARIANT: Record<MemberStatus, "success" | "warning" | "muted" | "destructive"> = {
   ativo: "success",
   convidado: "warning",
+  pendente_aprovacao: "warning",
   suspenso: "muted",
   excluido: "destructive",
 };

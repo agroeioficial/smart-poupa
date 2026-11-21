@@ -106,6 +106,86 @@ export type Database = {
           },
         ]
       }
+      collective_profiles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          group_id: string
+          id: string
+          name: string
+          relation_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          group_id: string
+          id?: string
+          name: string
+          relation_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          group_id?: string
+          id?: string
+          name?: string
+          relation_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collective_profiles_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_events: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          kind: string
+          member_id: string | null
+          member_name: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          kind: string
+          member_id?: string | null
+          member_name: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          kind?: string
+          member_id?: string | null
+          member_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_events_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_events_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_member_roles: {
         Row: {
           created_at: string
@@ -150,6 +230,7 @@ export type Database = {
       }
       group_members: {
         Row: {
+          collective_profile_id: string | null
           created_at: string
           created_by: string | null
           full_name: string
@@ -163,6 +244,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          collective_profile_id?: string | null
           created_at?: string
           created_by?: string | null
           full_name: string
@@ -176,6 +258,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          collective_profile_id?: string | null
           created_at?: string
           created_by?: string | null
           full_name?: string
@@ -189,6 +272,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "group_members_collective_profile_id_fkey"
+            columns: ["collective_profile_id"]
+            isOneToOne: false
+            referencedRelation: "collective_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "group_members_group_id_fkey"
             columns: ["group_id"]
@@ -236,6 +326,114 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      member_beneficiaries: {
+        Row: {
+          created_at: string
+          document_number: string
+          document_type: string
+          full_name: string
+          group_id: string
+          member_id: string
+          phone: string
+          relationship: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_number: string
+          document_type: string
+          full_name: string
+          group_id: string
+          member_id: string
+          phone: string
+          relationship: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_number?: string
+          document_type?: string
+          full_name?: string
+          group_id?: string
+          member_id?: string
+          phone?: string
+          relationship?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_beneficiaries_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_beneficiaries_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_beneficiary_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          document_number: string
+          document_type: string
+          full_name: string
+          group_id: string
+          id: string
+          member_id: string
+          phone: string
+          relationship: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          document_number: string
+          document_type: string
+          full_name: string
+          group_id: string
+          id?: string
+          member_id: string
+          phone: string
+          relationship: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          document_number?: string
+          document_type?: string
+          full_name?: string
+          group_id?: string
+          id?: string
+          member_id?: string
+          phone?: string
+          relationship?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_beneficiary_history_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_beneficiary_history_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       member_private_data: {
         Row: {
@@ -508,6 +706,10 @@ export type Database = {
         Returns: undefined
       }
       _confirmed_user_id: { Args: { _email: string }; Returns: string }
+      _in_collective: {
+        Args: { _profile: string; _uid: string }
+        Returns: boolean
+      }
       _link_user_invites: {
         Args: { _email: string; _uid: string }
         Returns: undefined
@@ -535,6 +737,15 @@ export type Database = {
         Returns: Database["public"]["Enums"]["request_status"]
       }
       _req: { Args: { _label: string; _v: string }; Returns: string }
+      _set_roles_logged: {
+        Args: {
+          _by: string
+          _label: string
+          _m: Database["public"]["Tables"]["group_members"]["Row"]
+          _roles: Database["public"]["Enums"]["group_role"][]
+        }
+        Returns: Database["public"]["Enums"]["group_role"][]
+      }
       _status_request_state: {
         Args: { _request_id: string }
         Returns: Database["public"]["Enums"]["request_status"]
@@ -578,6 +789,10 @@ export type Database = {
         Args: { _request_id: string }
         Returns: undefined
       }
+      create_collective_profile: {
+        Args: { _group_id: string; _name: string; _relation_type: string }
+        Returns: string
+      }
       create_group: {
         Args: {
           _director_email: string
@@ -596,6 +811,15 @@ export type Database = {
           full_name: string
           member_id: string
           roles: Database["public"]["Enums"]["group_role"][]
+        }[]
+      }
+      group_collective_profiles: {
+        Args: { _group_id: string }
+        Returns: {
+          id: string
+          member_count: number
+          name: string
+          relation_type: string
         }[]
       }
       group_directory_visible: { Args: { _group: string }; Returns: boolean }
@@ -639,6 +863,25 @@ export type Database = {
           _status: Database["public"]["Enums"]["member_status"]
         }
         Returns: Database["public"]["Enums"]["request_status"]
+      }
+      set_member_collective_profile: {
+        Args: { _member_id: string; _profile_id: string }
+        Returns: undefined
+      }
+      set_my_beneficiary: {
+        Args: {
+          _document_number: string
+          _document_type: string
+          _full_name: string
+          _member_id: string
+          _phone: string
+          _relationship: string
+        }
+        Returns: undefined
+      }
+      update_collective_profile: {
+        Args: { _name: string; _profile_id: string; _relation_type: string }
+        Returns: undefined
       }
       update_group_member: {
         Args: {

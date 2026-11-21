@@ -111,6 +111,7 @@ try {
   check("Edição que apaga o contacto é recusada", !!eUpdInc, eUpdInc?.message);
 
   // Permissões de cadastro
+  await mkUser("novoMem");
   const { error: eSecMem } = await add(cl.secA, "novoMem", ["membro"]);
   check("Secretário cadastra membro comum", !eSecMem, eSecMem?.message);
   const { error: eMemAdd } = await add(cl.memA1, "x2", ["membro"]);
@@ -122,14 +123,82 @@ try {
   const { data: novoTesId, error: eSecAdm } = await add(cl.secA, "novoTes", ["tesoureiro"]);
   const { data: novoTesRoles } = await dirA.from("group_member_roles").select("role").eq("member_id", novoTesId as string);
   const { data: novoTesReq } = await dirA.from("member_status_requests").select("kind,status").eq("member_id", novoTesId as string);
-  check("Cargo indicado pelo Secretário no cadastro fica pendente de aprovação", !eSecAdm && (novoTesRoles?.length ?? 0) === 0 && novoTesReq?.[0]?.kind === "papeis" && novoTesReq?.[0]?.status === "pendente", eSecAdm?.message);
+  check("Cargo indicado pelo Secretário no cadastro fica pendente da admissão", !eSecAdm && (novoTesRoles?.length ?? 0) === 0 && novoTesReq?.[0]?.kind === "admissao" && novoTesReq?.[0]?.status === "pendente", eSecAdm?.message);
   await dirA.rpc("cancel_member_status_request", { _request_id: (await dirA.from("member_status_requests").select("id").eq("member_id", novoTesId as string).single()).data!.id }).then(async () => {
     const { data: c } = await dirA.from("member_status_requests").select("status").eq("member_id", novoTesId as string).single();
     check("Só quem pediu pode cancelar (Diretor não cancela pedido do Secretário)", c?.status === "pendente");
   });
   const { data: secReq } = await cl.secA.from("member_status_requests").select("id").eq("member_id", novoTesId as string).single();
   const { error: eCancel } = await cl.secA.rpc("cancel_member_status_request", { _request_id: secReq!.id });
-  check("Quem pediu cancela o pedido pendente", !eCancel, eCancel?.message);
+  check("Pedido de admissão não pode ser cancelado", !!eCancel, eCancel?.message);
+
+  // Admissão com aprovação unânime (direção ativa: Diretor, Tesoureiro, Secretário; o Secretário cadastrou)
+  cl.novoMem = await login("novoMem");
+  const { data: nmRow } = await cl.novoMem.from("group_members").select("id,status").eq("user_id", users.novoMem).single();
+  await cl.novoMem.rpc("accept_invitation", { _member_id: nmRow!.id });
+  const { data: nmAfter } = await cl.novoMem.from("group_members").select("id,status").eq("group_id", gA as string);
+  check("Quem aceita antes da aprovação fica 'pendente_aprovacao'", nmAfter?.length === 1 && nmAfter[0].status === "pendente_aprovacao", JSON.stringify(nmAfter));
+  const { data: nmG } = await cl.novoMem.from("groups").select("id");
+  const { data: nmHist } = await cl.novoMem.from("admin_role_history").select("id");
+  const { data: nmBoard } = await cl.novoMem.rpc("group_board", { _group_id: gA as string });
+  check("Pendente vê só o nome do grupo, sem dados do grupo", nmG?.length === 1 && (nmHist?.length ?? 0) === 0 && (nmBoard?.length ?? 0) === 0);
+  const { data: admReq } = await dirA.from("member_status_requests").select("id").eq("member_id", nmRow!.id).eq("status", "pendente").single();
+  const { data: a1 } = await dirA.rpc("vote_member_status_request", { _request_id: admReq!.id, _approve: true, _reason: "" });
+  const { data: nmMid } = await dirA.from("group_members").select("status").eq("id", nmRow!.id).single();
+  check("Com 2 de 3 aprovações a admissão continua pendente", a1 === "pendente" && nmMid?.status === "pendente_aprovacao", `${a1}/${nmMid?.status}`);
+  const { data: a2 } = await cl.tesA.rpc("vote_member_status_request", { _request_id: admReq!.id, _approve: true, _reason: "" });
+  const { data: nmEnd } = await dirA.from("group_members").select("status").eq("id", nmRow!.id).single();
+  check("Com todos os administradores o membro fica ativo", a2 === "aprovado" && nmEnd?.status === "ativo", `${a2}/${nmEnd?.status}`);
+  const { data: evMem } = await cl.memA1.from("group_events").select("kind,member_name").eq("group_id", gA as string);
+  const { data: evB } = await dirB.from("group_events").select("id").eq("group_id", gA as string);
+  check("Os membros do grupo são avisados da entrada; outro grupo não", (evMem ?? []).some((e) => e.kind === "membro_admitido" && e.member_name === "Pessoa novoMem") && (evB?.length ?? 0) === 0);
+  const { data: rejId } = await add(cl.secA, "rejeitado", ["membro"]);
+  const { data: rejReq } = await dirA.from("member_status_requests").select("id").eq("member_id", rejId as string).eq("status", "pendente").single();
+  const { data: r1 } = await cl.tesA.rpc("vote_member_status_request", { _request_id: rejReq!.id, _approve: false, _reason: "Não cumpre os requisitos" });
+  const { data: rejRow } = await dirA.from("group_members").select("status").eq("id", rejId as string).single();
+  check("Uma rejeição exclui o candidato definitivamente", r1 === "rejeitado" && rejRow?.status === "excluido", `${r1}/${rejRow?.status}`);
+
+  // Beneficiário por morte (confidencial)
+  const memA1Id = memA1row!.id;
+  const { error: eBen } = await cl.memA1.rpc("set_my_beneficiary", { _member_id: memA1Id, _full_name: "Herdeira Teste", _relationship: "Filha", _phone: "840009999", _document_type: "bi", _document_number: "BI-HER-1" });
+  check("Membro indica o seu beneficiário", !eBen, eBen?.message);
+  await cl.memA1.rpc("set_my_beneficiary", { _member_id: memA1Id, _full_name: "Herdeira Teste", _relationship: "Filha", _phone: "840009998", _document_type: "passaporte", _document_number: "P-1" });
+  const { data: benHist } = await cl.memA1.from("member_beneficiary_history").select("id").eq("member_id", memA1Id);
+  check("Cada alteração fica no histórico", benHist?.length === 2, `linhas=${benHist?.length}`);
+  const { data: benM2 } = await cl.memA2.from("member_beneficiaries").select("member_id");
+  const { data: benM2h } = await cl.memA2.from("member_beneficiary_history").select("id");
+  check("Outros membros não veem o beneficiário", (benM2?.length ?? 0) === 0 && (benM2h?.length ?? 0) === 0);
+  const { data: benTes } = await cl.tesA.from("member_beneficiaries").select("full_name").eq("member_id", memA1Id);
+  const { data: benSec } = await cl.secA.from("member_beneficiary_history").select("id").eq("member_id", memA1Id);
+  check("A direção vê o beneficiário e o histórico", benTes?.length === 1 && benSec?.length === 2);
+  const { data: benB } = await dirB.from("member_beneficiaries").select("member_id").eq("group_id", gA as string);
+  const { data: benOwn } = await owner.from("member_beneficiaries").select("member_id");
+  check("Outro grupo e AGROEI não veem beneficiários", (benB?.length ?? 0) === 0 && (benOwn?.length ?? 0) === 0);
+  const { error: eBenOther } = await cl.memA2.rpc("set_my_beneficiary", { _member_id: memA1Id, _full_name: "Intruso", _relationship: "X", _phone: "1", _document_type: "bi", _document_number: "1" });
+  const { error: eBenDir } = await dirA.rpc("set_my_beneficiary", { _member_id: memA1Id, _full_name: "Intruso", _relationship: "X", _phone: "1", _document_type: "bi", _document_number: "1" });
+  check("Ninguém altera o beneficiário de outra pessoa (nem a direção)", !!eBenOther && !!eBenDir);
+  const { error: eBenDoc } = await cl.memA1.rpc("set_my_beneficiary", { _member_id: memA1Id, _full_name: "Herdeira", _relationship: "Filha", _phone: "1", _document_type: "nuit", _document_number: "1" });
+  check("Só aceita BI, Cédula, Cartão de Eleitor, Carta de condução ou Passaporte", !!eBenDoc, eBenDoc?.message);
+
+  // Perfis coletivos (uma cota)
+  const { data: profId, error: eProf } = await cl.secA.rpc("create_collective_profile", { _group_id: gA, _name: "Família Teste", _relation_type: "familia" });
+  check("Secretário cria perfil coletivo", !eProf && !!profId, eProf?.message);
+  const { error: eProfMem } = await cl.memA1.rpc("create_collective_profile", { _group_id: gA, _name: "Amigos X", _relation_type: "amigos" });
+  check("Membro não cria perfil coletivo", !!eProfMem, eProfMem?.message);
+  const { data: memA2r } = await dirA.from("group_members").select("id").eq("user_id", users.memA2).single();
+  await cl.secA.rpc("set_member_collective_profile", { _member_id: memA1Id, _profile_id: profId as string });
+  const { error: eAssign } = await cl.secA.rpc("set_member_collective_profile", { _member_id: memA2r!.id, _profile_id: profId as string });
+  const { data: sumMem } = await cl.memA1.rpc("group_collective_profiles", { _group_id: gA as string });
+  check("Membros veem o perfil com o número de integrantes", !eAssign && sumMem?.length === 1 && sumMem[0].member_count === 2 && sumMem[0].name === "Família Teste", JSON.stringify(sumMem));
+  const { data: integ } = await cl.memA1.from("group_members").select("full_name").eq("collective_profile_id", profId as string);
+  check("Membros veem quem compõe o perfil", integ?.length === 2);
+  const { data: sumB } = await dirB.rpc("group_collective_profiles", { _group_id: gA as string });
+  const { data: profB } = await dirB.from("collective_profiles").select("id").eq("group_id", gA as string);
+  check("Outro grupo não vê perfis coletivos", (sumB?.length ?? 0) === 0 && (profB?.length ?? 0) === 0);
+  const { data: profBId } = await dirB.rpc("create_collective_profile", { _group_id: gB, _name: "Colegas B", _relation_type: "colegas" });
+  const { error: eCrossProf } = await cl.secA.rpc("set_member_collective_profile", { _member_id: memA1Id, _profile_id: profBId as string });
+  const { error: eCrossProf2 } = await dirB.rpc("set_member_collective_profile", { _member_id: memA1Id, _profile_id: profBId as string });
+  check("Não se mistura membros e perfis de grupos diferentes", !!eCrossProf && !!eCrossProf2);
 
   // Pedidos de estado com aprovação da direção (3 administradores: Diretor, Tesoureiro, Secretário)
   const { data: memA2row } = await dirA.from("group_members").select("id").eq("user_id", users.memA2).single();
@@ -226,7 +295,7 @@ try {
 } catch (e) { check("Execução sem erros", false, String((e as Error).message ?? e)); }
 finally {
   if (groupIds.length) {
-    for (const t of ["audit_log", "admin_role_history", "member_status_request_votes", "member_status_requests", "group_member_roles", "member_private_data", "group_members"]) await admin.from(t).delete().in("group_id", groupIds);
+    for (const t of ["audit_log", "admin_role_history", "group_events", "member_beneficiary_history", "member_beneficiaries", "member_status_request_votes", "member_status_requests", "group_member_roles", "member_private_data", "group_members", "collective_profiles"]) await admin.from(t).delete().in("group_id", groupIds);
     await admin.from("groups").delete().in("id", groupIds);
   }
   for (const id of Object.values(users)) await admin.auth.admin.deleteUser(id);

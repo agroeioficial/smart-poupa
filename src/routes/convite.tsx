@@ -82,7 +82,7 @@ function InvitePage() {
     const { error } = await supabase.auth.updateUser({ password: parsed.data.password, data: { needs_password: false } });
     setBusy(false);
     if (error) { toast.error(errorMessage(error)); return; }
-    toast.success("Palavra-passe definida. Bem-vindo ao grupo!");
+    toast.success("Palavra-passe definida.");
     navigate({ to: "/painel", replace: true });
   }
 

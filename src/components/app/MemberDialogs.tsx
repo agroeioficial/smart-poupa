@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { memberPrivateQuery, type MemberRow } from "@/lib/queries";
 import { errorMessage, formatDate } from "@/lib/format";
 import { ALL_ROLES, ROLE_LABEL, STATUS_LABEL, type GroupRole, type MemberStatus, type RequestState } from "@/lib/roles";
+import { BeneficiaryAdminView } from "@/components/app/GovernanceParts";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ const reasonSchema = z.string().trim().min(3, "Indique o motivo (pelo menos 3 ca
 export function useInvalidateMembers(groupId: string) {
   const qc = useQueryClient();
   return () => {
-    for (const key of ["members", "members-private", "group-stats", "audit", "board", "board-requests", "admin-history"]) {
+    for (const key of ["members", "members-private", "group-stats", "audit", "board", "board-requests", "admin-history", "collective-profiles", "collective-members", "group-events"]) {
       qc.invalidateQueries({ queryKey: [key, groupId] });
     }
     qc.invalidateQueries({ queryKey: ["memberships"] });
@@ -274,6 +275,7 @@ export function EditMemberDialog({ groupId, member, readOnly, onClose }: { group
               <Field id="e-prof" name="profession" label="Profissão" required readOnly={readOnly} defaultValue={member.profession ?? ""} />
             </div>
             <PrivateFields defaults={priv.data ?? undefined} readOnly={readOnly} />
+            <BeneficiaryAdminView memberId={member.id} />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>{readOnly ? "Fechar" : "Cancelar"}</Button>
               {readOnly ? null : (
@@ -349,7 +351,7 @@ export function ProposeRolesDialog({ groupId, member, onClose }: { groupId: stri
   );
 }
 
-export type StatusTarget = { member: MemberRow; status: Exclude<MemberStatus, "convidado"> };
+export type StatusTarget = { member: MemberRow; status: Exclude<MemberStatus, "convidado" | "pendente_aprovacao"> };
 
 const STATUS_COPY: Record<StatusTarget["status"], { title: string; body: string; action: string; done: string }> = {
   suspenso: {

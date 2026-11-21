@@ -7,6 +7,7 @@ import { isAdmin, canManageMembers } from "@/lib/roles";
 import { formatDate } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { GroupEventsCard, MyBeneficiaryCard } from "@/components/app/GovernanceParts";
 
 export const Route = createFileRoute("/_authenticated/grupo/$groupId/")({
   head: () => ({
@@ -85,6 +86,11 @@ function GroupHome() {
             </Link>
           </Button>
         </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <GroupEventsCard groupId={groupId} />
+        <MyBeneficiaryCard memberId={membership.id} />
       </div>
     </div>
   );

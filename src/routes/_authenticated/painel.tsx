@@ -10,6 +10,7 @@ import { PageHeader, EmptyState } from "@/components/app/PageHeader";
 import { RoleBadges, StatusBadge } from "@/components/app/badges";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { WaitingApproval } from "@/components/app/GovernanceParts";
 
 export const Route = createFileRoute("/_authenticated/painel")({
   head: () => ({
@@ -48,7 +49,7 @@ function Painel() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Convite aceite. Bem-vindo ao grupo!");
+      toast.success("Convite aceite.");
       queryClient.invalidateQueries({ queryKey: ["memberships"] });
     },
     onError: (e) => toast.error(errorMessage(e)),
@@ -56,6 +57,7 @@ function Painel() {
 
   const invites = memberships.filter((m) => m.status === "convidado" && m.group);
   const active = memberships.filter((m) => m.status === "ativo" && m.group);
+  const waiting = memberships.filter((m) => m.status === "pendente_aprovacao" && m.group);
   const inactive = memberships.filter((m) => m.status === "suspenso" || m.status === "excluido");
   const firstName = ((user.user_metadata?.["full_name"] as string | undefined) ?? "").split(" ")[0];
 
@@ -104,6 +106,15 @@ function Painel() {
         </section>
       ) : null}
 
+      {waiting.length > 0 ? (
+        <section className="mb-8 space-y-3">
+          {waiting.map((m) => (
+            <WaitingApproval key={m.id} groupName={m.group?.name ?? ""} />
+          ))}
+        </section>
+      ) : null}
+
+      {waiting.length > 0 && active.length === 0 && invites.length === 0 ? null : (
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Grupos</h2>
         {active.length === 0 ? (
@@ -140,6 +151,7 @@ function Painel() {
           </div>
         )}
       </section>
+      )}
 
       {inactive.length > 0 ? (
         <section className="mt-8">

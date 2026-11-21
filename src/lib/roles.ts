@@ -2,7 +2,7 @@
 // A segurança real está nas políticas RLS e funções da base de dados; isto só decide o que a interface mostra.
 
 export type GroupRole = "diretor" | "tesoureiro" | "secretario" | "membro";
-export type MemberStatus = "convidado" | "ativo" | "suspenso" | "excluido";
+export type MemberStatus = "convidado" | "pendente_aprovacao" | "ativo" | "suspenso" | "excluido";
 export type RequestState = "pendente" | "aprovado" | "rejeitado" | "cancelado";
 
 export const ROLE_LABEL: Record<GroupRole, string> = {
@@ -14,6 +14,7 @@ export const ROLE_LABEL: Record<GroupRole, string> = {
 
 export const STATUS_LABEL: Record<MemberStatus, string> = {
   convidado: "Convidado",
+  pendente_aprovacao: "A aguardar aprovação",
   ativo: "Ativo",
   suspenso: "Suspenso",
   excluido: "Excluído",
@@ -47,7 +48,7 @@ export function allowedStatusRequests(opts: {
   isSelf: boolean;
 }): MemberStatus[] {
   const { myRoles, targetStatus, isSelf } = opts;
-  if (isSelf || !isAdmin(myRoles) || targetStatus === "excluido") return [];
+  if (isSelf || !isAdmin(myRoles) || targetStatus === "excluido" || targetStatus === "pendente_aprovacao") return [];
   if (targetStatus === "suspenso") return ["ativo", "excluido"];
   return ["suspenso", "excluido"];
 }
@@ -66,13 +67,15 @@ export function approvalProgress(opts: {
   eligible: { memberId: string; roles: GroupRole[] }[];
   approvals: string[];
   rejected: boolean;
+  /** Admissão de novo membro: todos os administradores ativos têm de aprovar. */
+  unanimous?: boolean;
 }) {
   const { eligible, rejected } = opts;
   const ids = new Set(eligible.map((e) => e.memberId));
   const approvers = eligible.filter((e) => opts.approvals.includes(e.memberId));
-  const need = Math.min(eligible.length, 3);
+  const need = opts.unanimous ? eligible.length : Math.min(eligible.length, 3);
   const missingRoles: GroupRole[] =
-    eligible.length >= 3
+    !opts.unanimous && eligible.length >= 3
       ? ADMIN_ROLES.filter(
           (role) => eligible.some((e) => e.roles.includes(role)) && !approvers.some((a) => a.roles.includes(role)),
         )
@@ -102,6 +105,24 @@ export function isRecordIncomplete(r: MemberRecord) {
     (v) => !v || !String(v).trim(),
   );
 }
+
+/** Documentos aceites para o beneficiário por morte (decisão da AGROEI). */
+export const BENEFICIARY_DOCUMENTS = {
+  bi: "BI",
+  cedula: "Cédula",
+  cartao_eleitor: "Cartão de Eleitor",
+  carta_conducao: "Carta de condução",
+  passaporte: "Passaporte",
+} as const;
+export type BeneficiaryDocument = keyof typeof BENEFICIARY_DOCUMENTS;
+
+export const RELATION_TYPES = {
+  familia: "Família",
+  amigos: "Amigos",
+  colegas: "Colegas",
+  outro: "Outro",
+} as const;
+export type RelationType = keyof typeof RELATION_TYPES;
 
 export function sortRoles(roles: GroupRole[]) {
   return [...roles].sort((a, b) => ALL_ROLES.indexOf(a) - ALL_ROLES.indexOf(b));

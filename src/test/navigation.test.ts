@@ -25,6 +25,9 @@ describe("Menu Os meus grupos", () => {
     expect(showMyGroups([m("a", "ativo"), m("b", "ativo")], false)).toBe(true);
     expect(singleGroupId([m("a", "ativo"), m("b", "ativo")])).toBeNull();
   });
+  it("quem aguarda aprovação não entra direto no grupo", () => {
+    expect(singleGroupId([m("a", "pendente_aprovacao")])).toBeNull();
+  });
   it("grupo de onde foi excluído não conta", () => {
     expect(showMyGroups([m("a", "ativo"), m("b", "excluido")], false)).toBe(false);
     expect(singleGroupId([m("a", "ativo"), m("b", "excluido")])).toBe("a");

@@ -2,7 +2,7 @@ import type { Membership } from "./queries";
 
 /** Grupos que contam para o menu "Os meus grupos": ativos ou com convite por aceitar. */
 export function relevantGroups(memberships: Membership[]) {
-  return memberships.filter((m) => m.group && (m.status === "ativo" || m.status === "convidado"));
+  return memberships.filter((m) => m.group && (m.status === "ativo" || m.status === "convidado" || m.status === "pendente_aprovacao"));
 }
 
 /** Se a pessoa está ativa num único grupo (e sem outros convites), devolve esse grupo. */

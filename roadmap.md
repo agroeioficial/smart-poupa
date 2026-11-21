@@ -27,10 +27,10 @@
 - [ ] Envio real de emails: falta configurar o servidor de email (SMTP) e os endereços autorizados no Supabase (ação da AGROEI)
 
 ## Governança de membros (21/11)
-- [ ] Beneficiário confidencial por morte + histórico
-- [ ] Admissão com aprovação unânime (estado "A aguardar aprovação", ecrã de espera, aviso aos membros)
-- [ ] Perfis coletivos (uma cota) na lista de membros
-- [ ] Testes de segurança atualizados
+- [x] Beneficiário confidencial por morte + histórico
+- [x] Admissão com aprovação unânime (estado "A aguardar aprovação", ecrã de espera, aviso aos membros)
+- [x] Perfis coletivos (uma cota) na lista de membros
+- [x] Testes de segurança atualizados (91/91)
 
 ## Próximas fases (não iniciar sem pedido)
 - Fase 2 — Poupanças · Fase 3 — Empréstimos · Fase 4 — Administração · Fase 5 — SaaS AGROEI · Fase 6 — Exportação e PWA (ícones da app instalada já preparados)

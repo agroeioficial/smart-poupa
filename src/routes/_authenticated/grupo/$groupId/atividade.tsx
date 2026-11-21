@@ -38,6 +38,12 @@ const ACTION_LABEL: Record<string, string> = {
   pedido_estado_aprovado: "Voto a favor de um pedido",
   pedido_estado_rejeitado: "Voto contra um pedido",
   pedido_estado_cancelado: "Pedido cancelado",
+  admissao_aprovada: "Admissão aprovada por toda a direção",
+  admissao_rejeitada: "Admissão rejeitada (candidato excluído)",
+  beneficiario_atualizado: "Beneficiário de um membro atualizado",
+  perfil_coletivo_criado: "Perfil coletivo criado",
+  perfil_coletivo_alterado: "Perfil coletivo alterado",
+  perfil_coletivo_membro: "Membro associado a um perfil coletivo",
 };
 
 function ActivityPage() {

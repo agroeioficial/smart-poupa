@@ -159,10 +159,15 @@ function RequestCard({
     eligible,
     approvals: r.votes.filter((v) => v.vote === "aprovado").map((v) => v.voter_member_id),
     rejected: r.votes.some((v) => v.vote === "rejeitado"),
+    unanimous: r.kind === "admissao",
   });
+  const missingPeople =
+    r.kind === "admissao"
+      ? board.filter((b) => b.member_id !== r.member_id && !r.votes.some((v) => v.voter_member_id === b.member_id)).map((b) => b.full_name)
+      : [];
   const alreadyVoted = r.votes.some((v) => v.voter_member_id === myMemberId);
   const canVote = !alreadyVoted && myMemberId !== r.member_id && eligible.some((e) => e.memberId === myMemberId);
-  const isRequester = r.requested_by === myUserId;
+  const isRequester = r.requested_by === myUserId && r.kind !== "admissao";
 
   const vote = useMutation({
     mutationFn: async (v: { approve: boolean; reason?: string }) => {
@@ -175,7 +180,7 @@ function RequestCard({
       return data as RequestState;
     },
     onSuccess: (state) => {
-      if (state === "rejeitado") toast.success("Pedido rejeitado.");
+      if (state === "rejeitado") toast.success(r.kind === "admissao" ? "Admissão rejeitada. O candidato fica excluído." : "Pedido rejeitado.");
       else if (state === "aprovado") announceRequest(state, "Pedido aprovado e aplicado.");
       else toast.success("Voto registado. Ainda faltam aprovações.");
       setRejecting(false);
@@ -200,10 +205,14 @@ function RequestCard({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
           <p className="font-semibold text-foreground">
-            {r.kind === "papeis" ? "Cargos de " : r.requested_status === "ativo" ? "Reativar " : r.requested_status === "suspenso" ? "Suspender " : "Excluir "}
+            {r.kind === "admissao" ? "Admissão de " : r.kind === "papeis" ? "Cargos de " : r.requested_status === "ativo" ? "Reativar " : r.requested_status === "suspenso" ? "Suspender " : "Excluir "}
             {r.member_name}
           </p>
-          {r.kind === "papeis" ? (
+          {r.kind === "admissao" ? (
+            <p className="text-sm text-muted-foreground">
+              Entra como: <span className="font-medium text-foreground">{rolesText(r.requested_roles)}</span> · precisa da aprovação de todos os administradores
+            </p>
+          ) : r.kind === "papeis" ? (
             <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
               {rolesText(r.from_roles)} <ArrowRight className="size-3.5" /> <span className="font-medium text-foreground">{rolesText(r.requested_roles)}</span>
             </p>
@@ -237,6 +246,11 @@ function RequestCard({
           <ShieldCheck className="size-3.5" /> Falta a aprovação de: {progress.missingRoles.map((x) => ROLE_LABEL[x]).join(", ")}
         </p>
       ) : null}
+      {missingPeople.length ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ShieldCheck className="size-3.5" /> Falta a aprovação de: {missingPeople.join(", ")}
+        </p>
+      ) : null}
 
       {canVote || isRequester ? (
         <div className="mt-4 flex flex-wrap gap-2">
@@ -261,8 +275,12 @@ function RequestCard({
       <Dialog open={rejecting} onOpenChange={setRejecting}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Rejeitar pedido</DialogTitle>
-            <DialogDescription>Uma rejeição encerra o pedido. Indique o motivo.</DialogDescription>
+            <DialogTitle>{r.kind === "admissao" ? "Rejeitar admissão" : "Rejeitar pedido"}</DialogTitle>
+            <DialogDescription>
+              {r.kind === "admissao"
+                ? `${r.member_name} ficará excluído(a) definitivamente. Indique o motivo.`
+                : "Uma rejeição encerra o pedido. Indique o motivo."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
             <Label htmlFor="reject-reason">Motivo<span className="text-destructive"> *</span></Label>

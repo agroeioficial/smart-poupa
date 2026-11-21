@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { keepPreviousData, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { EyeOff, MoreHorizontal, Phone, Plus, Search } from "lucide-react";
-import { boardRequestsQuery, groupQuery, membersPrivateQuery, membersQuery, PAGE_SIZE, type MemberRow } from "@/lib/queries";
+import { boardRequestsQuery, collectiveProfilesQuery, groupQuery, membersPrivateQuery, membersQuery, PAGE_SIZE, type MemberRow } from "@/lib/queries";
 import { useGroupAccess } from "@/lib/use-group-access";
 import {
   STATUS_LABEL,
@@ -24,6 +24,7 @@ import {
   useSendInvite,
   type StatusTarget,
 } from "@/components/app/MemberDialogs";
+import { AssignCollectiveDialog, CollectiveProfilesSection } from "@/components/app/GovernanceParts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -70,6 +71,9 @@ function MembersPage() {
   const [editing, setEditing] = useState<MemberRow | null>(null);
   const [rolesFor, setRolesFor] = useState<MemberRow | null>(null);
   const [statusTarget, setStatusTarget] = useState<StatusTarget | null>(null);
+  const [collectiveFor, setCollectiveFor] = useState<MemberRow | null>(null);
+  const profiles = useQuery(collectiveProfilesQuery(groupId));
+  const profileName = (id: string | null) => (id ? profiles.data?.find((p) => p.id === id)?.name : undefined);
   const resend = useSendInvite(groupId);
 
   useEffect(() => {
@@ -132,6 +136,8 @@ function MembersPage() {
         </Card>
       ) : null}
 
+      <CollectiveProfilesSection groupId={groupId} manage={manage} />
+
       <div className="mb-4 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -189,6 +195,9 @@ function MembersPage() {
               const showMenu = admin;
               const flags = (
                 <>
+                  {profileName(m.collective_profile_id) ? (
+                    <Badge variant="secondary">{profileName(m.collective_profile_id)}</Badge>
+                  ) : null}
                   {pending ? <Badge variant="gold">Pedido pendente</Badge> : null}
                   {incomplete(m) ? <Badge variant="warning">Cadastro incompleto</Badge> : null}
                 </>
@@ -242,6 +251,9 @@ function MembersPage() {
                             Reenviar convite
                           </DropdownMenuItem>
                         ) : null}
+                        {manage && m.status !== "excluido" ? (
+                          <DropdownMenuItem onSelect={() => setCollectiveFor(m)}>Perfil coletivo</DropdownMenuItem>
+                        ) : null}
                         {proposeRoles ? (
                           <DropdownMenuItem onSelect={() => setRolesFor(m)}>Propor cargos</DropdownMenuItem>
                         ) : null}
@@ -290,6 +302,7 @@ function MembersPage() {
           <EditMemberDialog groupId={groupId} member={editing} readOnly={!manage} onClose={() => setEditing(null)} />
           <ProposeRolesDialog groupId={groupId} member={rolesFor} onClose={() => setRolesFor(null)} />
           <StatusRequestDialog groupId={groupId} target={statusTarget} onClose={() => setStatusTarget(null)} />
+          <AssignCollectiveDialog groupId={groupId} member={collectiveFor} onClose={() => setCollectiveFor(null)} />
         </>
       ) : null}
     </div>
