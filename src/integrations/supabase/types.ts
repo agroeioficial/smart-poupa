@@ -672,7 +672,12 @@ export type Database = {
     Enums: {
       group_role: "diretor" | "tesoureiro" | "secretario" | "membro"
       group_status: "ativo" | "suspenso"
-      member_status: "convidado" | "ativo" | "suspenso" | "excluido"
+      member_status:
+        | "convidado"
+        | "pendente_aprovacao"
+        | "ativo"
+        | "suspenso"
+        | "excluido"
       platform_role: "agroei_owner"
       request_status: "pendente" | "aprovado" | "rejeitado" | "cancelado"
       vote_choice: "aprovado" | "rejeitado"
@@ -805,7 +810,13 @@ export const Constants = {
     Enums: {
       group_role: ["diretor", "tesoureiro", "secretario", "membro"],
       group_status: ["ativo", "suspenso"],
-      member_status: ["convidado", "ativo", "suspenso", "excluido"],
+      member_status: [
+        "convidado",
+        "pendente_aprovacao",
+        "ativo",
+        "suspenso",
+        "excluido",
+      ],
       platform_role: ["agroei_owner"],
       request_status: ["pendente", "aprovado", "rejeitado", "cancelado"],
       vote_choice: ["aprovado", "rejeitado"],
