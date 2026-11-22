@@ -33,11 +33,11 @@
 - [x] Testes de segurança atualizados (91/91)
 
 ## Fase 2 — Depósitos e comprovativos (22/11)
-- [ ] Contas/carteiras do grupo (M-Pesa, e-Mola, mKesh, banco)
-- [ ] Submissão de depósito (individual ou perfil coletivo) com referência e comprovativo
-- [ ] Validação/rejeição por Tesoureiro ou Diretor; saldo só após aprovação
-- [ ] Estornos documentados; registos imutáveis e auditados
-- [ ] Testes de segurança (base de dados) e de interface
+- [x] Contas/carteiras do grupo (M-Pesa, e-Mola, mKesh, banco)
+- [x] Submissão de depósito (individual ou perfil coletivo) com referência e comprovativo
+- [x] Validação/rejeição por Tesoureiro ou Diretor; saldo só após aprovação
+- [x] Estornos documentados; registos imutáveis e auditados
+- [x] Testes de segurança (45/45 na base de dados; Fase 1 continua 91/91) e de interface
 - [x] Decisões: sem prazo de validação; estorno por Tesoureiro ou Diretor
 
 ## Próximas fases (não iniciar sem pedido)

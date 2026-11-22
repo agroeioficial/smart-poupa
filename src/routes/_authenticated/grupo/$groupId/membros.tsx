@@ -208,11 +208,11 @@ function MembersPage() {
                     {initials(m.full_name)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="truncate font-semibold text-foreground">{m.full_name}</span>
                       {isSelf ? <span className="text-xs text-muted-foreground">(eu)</span> : null}
                       <span className="hidden flex-wrap gap-1 md:flex">{flags}</span>
-                    </p>
+                    </div>
                     <p className="mt-0.5 flex flex-wrap gap-x-3 text-sm text-muted-foreground">
                       {m.phone ? (
                         <a href={`tel:${m.phone}`} className="inline-flex items-center gap-1 hover:text-foreground">

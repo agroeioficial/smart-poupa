@@ -4,6 +4,7 @@ import { useState } from "react";
 import { auditQuery, PAGE_SIZE } from "@/lib/queries";
 import { useGroupAccess } from "@/lib/use-group-access";
 import { canEditSettings } from "@/lib/roles";
+import { formatMZN } from "@/lib/finance";
 import { formatDateTime } from "@/lib/format";
 import { PageHeader, EmptyState } from "@/components/app/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,22 @@ const ACTION_LABEL: Record<string, string> = {
   perfil_coletivo_criado: "Perfil coletivo criado",
   perfil_coletivo_alterado: "Perfil coletivo alterado",
   perfil_coletivo_membro: "Membro associado a um perfil coletivo",
+  conta_pagamento_criada: "Conta do grupo registada",
+  conta_pagamento_ativada: "Conta do grupo ativada",
+  conta_pagamento_desativada: "Conta do grupo desativada",
+  deposito_submetido: "Depósito submetido",
+  deposito_aprovado: "Depósito aprovado",
+  deposito_rejeitado: "Depósito rejeitado",
+  deposito_estornado: "Depósito estornado",
 };
+
+function valueOf(details: unknown): number | null {
+  if (details && typeof details === "object" && "valor" in details) {
+    const v = Number((details as { valor: unknown }).valor);
+    return Number.isFinite(v) ? v : null;
+  }
+  return null;
+}
 
 function ActivityPage() {
   const { groupId } = Route.useParams();
@@ -69,7 +85,10 @@ function ActivityPage() {
           <ul className="divide-y">
             {data.rows.map((r) => (
               <li key={r.id} className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                <span className="text-sm font-medium text-foreground">{ACTION_LABEL[r.action] ?? r.action}</span>
+                <span className="text-sm font-medium text-foreground">
+                  {ACTION_LABEL[r.action] ?? r.action}
+                  {valueOf(r.details) !== null ? <span className="ml-2 tabular-nums text-muted-foreground">{formatMZN(valueOf(r.details))}</span> : null}
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {r.actor_id === user.id ? "Por mim · " : ""}
                   {formatDateTime(r.created_at)}

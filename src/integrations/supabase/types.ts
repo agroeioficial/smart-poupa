@@ -144,6 +144,115 @@ export type Database = {
           },
         ]
       }
+      deposits: {
+        Row: {
+          amount: number
+          channel: Database["public"]["Enums"]["payment_channel"]
+          collective_profile_id: string | null
+          created_at: string
+          deposit_date: string
+          group_id: string
+          id: string
+          member_id: string | null
+          notes: string | null
+          payment_account_id: string | null
+          receipt_path: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_member: string | null
+          status: Database["public"]["Enums"]["deposit_status"]
+          submitted_by: string
+          submitted_by_member: string
+          transaction_ref: string
+        }
+        Insert: {
+          amount: number
+          channel: Database["public"]["Enums"]["payment_channel"]
+          collective_profile_id?: string | null
+          created_at?: string
+          deposit_date: string
+          group_id: string
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          payment_account_id?: string | null
+          receipt_path: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_member?: string | null
+          status?: Database["public"]["Enums"]["deposit_status"]
+          submitted_by: string
+          submitted_by_member: string
+          transaction_ref: string
+        }
+        Update: {
+          amount?: number
+          channel?: Database["public"]["Enums"]["payment_channel"]
+          collective_profile_id?: string | null
+          created_at?: string
+          deposit_date?: string
+          group_id?: string
+          id?: string
+          member_id?: string | null
+          notes?: string | null
+          payment_account_id?: string | null
+          receipt_path?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_member?: string | null
+          status?: Database["public"]["Enums"]["deposit_status"]
+          submitted_by?: string
+          submitted_by_member?: string
+          transaction_ref?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deposits_collective_profile_id_fkey"
+            columns: ["collective_profile_id"]
+            isOneToOne: false
+            referencedRelation: "collective_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deposits_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deposits_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deposits_payment_account_id_fkey"
+            columns: ["payment_account_id"]
+            isOneToOne: false
+            referencedRelation: "group_payment_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deposits_reviewed_by_member_fkey"
+            columns: ["reviewed_by_member"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deposits_submitted_by_member_fkey"
+            columns: ["submitted_by_member"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_events: {
         Row: {
           created_at: string
@@ -281,6 +390,53 @@ export type Database = {
           },
           {
             foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_payment_accounts: {
+        Row: {
+          account_number: string
+          active: boolean
+          channel: Database["public"]["Enums"]["payment_channel"]
+          created_at: string
+          created_by: string | null
+          group_id: string
+          holder_name: string
+          id: string
+          institution: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_number: string
+          active?: boolean
+          channel: Database["public"]["Enums"]["payment_channel"]
+          created_at?: string
+          created_by?: string | null
+          group_id: string
+          holder_name: string
+          id?: string
+          institution?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_number?: string
+          active?: boolean
+          channel?: Database["public"]["Enums"]["payment_channel"]
+          created_at?: string
+          created_by?: string | null
+          group_id?: string
+          holder_name?: string
+          id?: string
+          institution?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_payment_accounts_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
@@ -680,6 +836,84 @@ export type Database = {
         }
         Relationships: []
       }
+      savings_ledger: {
+        Row: {
+          amount: number
+          collective_profile_id: string | null
+          created_at: string
+          created_by: string | null
+          deposit_id: string
+          group_id: string
+          id: string
+          kind: string
+          member_id: string | null
+          reason: string | null
+          reverses_entry_id: string | null
+        }
+        Insert: {
+          amount: number
+          collective_profile_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_id: string
+          group_id: string
+          id?: string
+          kind: string
+          member_id?: string | null
+          reason?: string | null
+          reverses_entry_id?: string | null
+        }
+        Update: {
+          amount?: number
+          collective_profile_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_id?: string
+          group_id?: string
+          id?: string
+          kind?: string
+          member_id?: string | null
+          reason?: string | null
+          reverses_entry_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "savings_ledger_collective_profile_id_fkey"
+            columns: ["collective_profile_id"]
+            isOneToOne: false
+            referencedRelation: "collective_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_ledger_deposit_id_fkey"
+            columns: ["deposit_id"]
+            isOneToOne: false
+            referencedRelation: "deposits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_ledger_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_ledger_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_ledger_reverses_entry_id_fkey"
+            columns: ["reverses_entry_id"]
+            isOneToOne: false
+            referencedRelation: "savings_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -702,6 +936,13 @@ export type Database = {
           _full_name: string
           _phone: string
           _profession: string
+        }
+        Returns: undefined
+      }
+      _check_not_self_finance: {
+        Args: {
+          _d: Database["public"]["Tables"]["deposits"]["Row"]
+          _uid: string
         }
         Returns: undefined
       }
@@ -736,6 +977,7 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["request_status"]
       }
+      _purge_allowed: { Args: never; Returns: boolean }
       _req: { Args: { _label: string; _v: string }; Returns: string }
       _set_roles_logged: {
         Args: {
@@ -750,6 +992,7 @@ export type Database = {
         Args: { _request_id: string }
         Returns: Database["public"]["Enums"]["request_status"]
       }
+      _try_uuid: { Args: { _t: string }; Returns: string }
       _valid_email: { Args: { _email: string }; Returns: boolean }
       _validate_roles_change: {
         Args: {
@@ -805,6 +1048,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_payment_account: {
+        Args: {
+          _account_number: string
+          _channel: Database["public"]["Enums"]["payment_channel"]
+          _group_id: string
+          _holder_name: string
+          _institution: string
+        }
+        Returns: string
+      }
       group_board: {
         Args: { _group_id: string }
         Returns: {
@@ -823,6 +1076,16 @@ export type Database = {
         }[]
       }
       group_directory_visible: { Args: { _group: string }; Returns: boolean }
+      group_savings: {
+        Args: { _group_id: string }
+        Returns: {
+          confirmed: number
+          label: string
+          pending: number
+          scope: string
+          target_id: string
+        }[]
+      }
       has_group_role: {
         Args: {
           _group: string
@@ -839,6 +1102,10 @@ export type Database = {
         Args: { _group: string; _uid: string }
         Returns: boolean
       }
+      is_finance_admin: {
+        Args: { _group: string; _uid: string }
+        Returns: boolean
+      }
       is_group_admin: {
         Args: { _group: string; _uid: string }
         Returns: boolean
@@ -848,6 +1115,20 @@ export type Database = {
         Returns: boolean
       }
       is_platform_owner: { Args: { _uid: string }; Returns: boolean }
+      my_savings: {
+        Args: { _group_id: string }
+        Returns: {
+          confirmed: number
+          label: string
+          pending: number
+          scope: string
+          target_id: string
+        }[]
+      }
+      purge_test_group_finance: {
+        Args: { _group_id: string }
+        Returns: undefined
+      }
       request_member_roles_change: {
         Args: {
           _member_id: string
@@ -864,6 +1145,14 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["request_status"]
       }
+      reverse_deposit: {
+        Args: { _deposit_id: string; _reason: string }
+        Returns: string
+      }
+      review_deposit: {
+        Args: { _approve: boolean; _deposit_id: string; _reason?: string }
+        Returns: Database["public"]["Enums"]["deposit_status"]
+      }
       set_member_collective_profile: {
         Args: { _member_id: string; _profile_id: string }
         Returns: undefined
@@ -878,6 +1167,24 @@ export type Database = {
           _relationship: string
         }
         Returns: undefined
+      }
+      set_payment_account_active: {
+        Args: { _account_id: string; _active: boolean }
+        Returns: undefined
+      }
+      submit_deposit: {
+        Args: {
+          _amount: number
+          _channel: Database["public"]["Enums"]["payment_channel"]
+          _deposit_date: string
+          _for_collective: boolean
+          _group_id: string
+          _notes?: string
+          _payment_account_id: string
+          _receipt_path: string
+          _transaction_ref: string
+        }
+        Returns: string
       }
       update_collective_profile: {
         Args: { _name: string; _profile_id: string; _relation_type: string }
@@ -913,6 +1220,7 @@ export type Database = {
       }
     }
     Enums: {
+      deposit_status: "pendente" | "aprovado" | "rejeitado"
       group_role: "diretor" | "tesoureiro" | "secretario" | "membro"
       group_status: "ativo" | "suspenso"
       member_status:
@@ -921,6 +1229,7 @@ export type Database = {
         | "ativo"
         | "suspenso"
         | "excluido"
+      payment_channel: "mpesa" | "emola" | "mkesh" | "banco"
       platform_role: "agroei_owner"
       request_status: "pendente" | "aprovado" | "rejeitado" | "cancelado"
       vote_choice: "aprovado" | "rejeitado"
@@ -1051,6 +1360,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      deposit_status: ["pendente", "aprovado", "rejeitado"],
       group_role: ["diretor", "tesoureiro", "secretario", "membro"],
       group_status: ["ativo", "suspenso"],
       member_status: [
@@ -1060,6 +1370,7 @@ export const Constants = {
         "suspenso",
         "excluido",
       ],
+      payment_channel: ["mpesa", "emola", "mkesh", "banco"],
       platform_role: ["agroei_owner"],
       request_status: ["pendente", "aprovado", "rejeitado", "cancelado"],
       vote_choice: ["aprovado", "rejeitado"],

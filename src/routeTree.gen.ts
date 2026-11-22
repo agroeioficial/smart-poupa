@@ -20,8 +20,10 @@ import { Route as AuthenticatedGrupoGroupIdRouteRouteImport } from './routes/_au
 import { Route as AuthenticatedGrupoGroupIdIndexRouteImport } from './routes/_authenticated/grupo/$groupId/index'
 import { Route as AuthenticatedGrupoGroupIdAtividadeRouteImport } from './routes/_authenticated/grupo/$groupId/atividade'
 import { Route as AuthenticatedGrupoGroupIdDefinicoesRouteImport } from './routes/_authenticated/grupo/$groupId/definicoes'
+import { Route as AuthenticatedGrupoGroupIdDepositosRouteImport } from './routes/_authenticated/grupo/$groupId/depositos'
 import { Route as AuthenticatedGrupoGroupIdDirecaoRouteImport } from './routes/_authenticated/grupo/$groupId/direcao'
 import { Route as AuthenticatedGrupoGroupIdMembrosRouteImport } from './routes/_authenticated/grupo/$groupId/membros'
+import { Route as AuthenticatedGrupoGroupIdPoupancaRouteImport } from './routes/_authenticated/grupo/$groupId/poupanca'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -81,6 +83,12 @@ const AuthenticatedGrupoGroupIdDefinicoesRoute =
     path: '/definicoes',
     getParentRoute: () => AuthenticatedGrupoGroupIdRouteRoute,
   } as any)
+const AuthenticatedGrupoGroupIdDepositosRoute =
+  AuthenticatedGrupoGroupIdDepositosRouteImport.update({
+    id: '/depositos',
+    path: '/depositos',
+    getParentRoute: () => AuthenticatedGrupoGroupIdRouteRoute,
+  } as any)
 const AuthenticatedGrupoGroupIdDirecaoRoute =
   AuthenticatedGrupoGroupIdDirecaoRouteImport.update({
     id: '/direcao',
@@ -91,6 +99,12 @@ const AuthenticatedGrupoGroupIdMembrosRoute =
   AuthenticatedGrupoGroupIdMembrosRouteImport.update({
     id: '/membros',
     path: '/membros',
+    getParentRoute: () => AuthenticatedGrupoGroupIdRouteRoute,
+  } as any)
+const AuthenticatedGrupoGroupIdPoupancaRoute =
+  AuthenticatedGrupoGroupIdPoupancaRouteImport.update({
+    id: '/poupanca',
+    path: '/poupanca',
     getParentRoute: () => AuthenticatedGrupoGroupIdRouteRoute,
   } as any)
 
@@ -104,8 +118,10 @@ export interface FileRoutesByFullPath {
   '/grupo/$groupId': typeof AuthenticatedGrupoGroupIdRouteRouteWithChildren
   '/grupo/$groupId/atividade': typeof AuthenticatedGrupoGroupIdAtividadeRoute
   '/grupo/$groupId/definicoes': typeof AuthenticatedGrupoGroupIdDefinicoesRoute
+  '/grupo/$groupId/depositos': typeof AuthenticatedGrupoGroupIdDepositosRoute
   '/grupo/$groupId/direcao': typeof AuthenticatedGrupoGroupIdDirecaoRoute
   '/grupo/$groupId/membros': typeof AuthenticatedGrupoGroupIdMembrosRoute
+  '/grupo/$groupId/poupanca': typeof AuthenticatedGrupoGroupIdPoupancaRoute
   '/grupo/$groupId/': typeof AuthenticatedGrupoGroupIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -117,8 +133,10 @@ export interface FileRoutesByTo {
   '/painel': typeof AuthenticatedPainelRoute
   '/grupo/$groupId/atividade': typeof AuthenticatedGrupoGroupIdAtividadeRoute
   '/grupo/$groupId/definicoes': typeof AuthenticatedGrupoGroupIdDefinicoesRoute
+  '/grupo/$groupId/depositos': typeof AuthenticatedGrupoGroupIdDepositosRoute
   '/grupo/$groupId/direcao': typeof AuthenticatedGrupoGroupIdDirecaoRoute
   '/grupo/$groupId/membros': typeof AuthenticatedGrupoGroupIdMembrosRoute
+  '/grupo/$groupId/poupanca': typeof AuthenticatedGrupoGroupIdPoupancaRoute
   '/grupo/$groupId': typeof AuthenticatedGrupoGroupIdIndexRoute
 }
 export interface FileRoutesById {
@@ -133,8 +151,10 @@ export interface FileRoutesById {
   '/_authenticated/grupo/$groupId': typeof AuthenticatedGrupoGroupIdRouteRouteWithChildren
   '/_authenticated/grupo/$groupId/atividade': typeof AuthenticatedGrupoGroupIdAtividadeRoute
   '/_authenticated/grupo/$groupId/definicoes': typeof AuthenticatedGrupoGroupIdDefinicoesRoute
+  '/_authenticated/grupo/$groupId/depositos': typeof AuthenticatedGrupoGroupIdDepositosRoute
   '/_authenticated/grupo/$groupId/direcao': typeof AuthenticatedGrupoGroupIdDirecaoRoute
   '/_authenticated/grupo/$groupId/membros': typeof AuthenticatedGrupoGroupIdMembrosRoute
+  '/_authenticated/grupo/$groupId/poupanca': typeof AuthenticatedGrupoGroupIdPoupancaRoute
   '/_authenticated/grupo/$groupId/': typeof AuthenticatedGrupoGroupIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -149,8 +169,10 @@ export interface FileRouteTypes {
     | '/grupo/$groupId'
     | '/grupo/$groupId/atividade'
     | '/grupo/$groupId/definicoes'
+    | '/grupo/$groupId/depositos'
     | '/grupo/$groupId/direcao'
     | '/grupo/$groupId/membros'
+    | '/grupo/$groupId/poupanca'
     | '/grupo/$groupId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -162,8 +184,10 @@ export interface FileRouteTypes {
     | '/painel'
     | '/grupo/$groupId/atividade'
     | '/grupo/$groupId/definicoes'
+    | '/grupo/$groupId/depositos'
     | '/grupo/$groupId/direcao'
     | '/grupo/$groupId/membros'
+    | '/grupo/$groupId/poupanca'
     | '/grupo/$groupId'
   id:
     | '__root__'
@@ -177,8 +201,10 @@ export interface FileRouteTypes {
     | '/_authenticated/grupo/$groupId'
     | '/_authenticated/grupo/$groupId/atividade'
     | '/_authenticated/grupo/$groupId/definicoes'
+    | '/_authenticated/grupo/$groupId/depositos'
     | '/_authenticated/grupo/$groupId/direcao'
     | '/_authenticated/grupo/$groupId/membros'
+    | '/_authenticated/grupo/$groupId/poupanca'
     | '/_authenticated/grupo/$groupId/'
   fileRoutesById: FileRoutesById
 }
@@ -269,6 +295,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGrupoGroupIdDefinicoesRouteImport
       parentRoute: typeof AuthenticatedGrupoGroupIdRouteRoute
     }
+    '/_authenticated/grupo/$groupId/depositos': {
+      id: '/_authenticated/grupo/$groupId/depositos'
+      path: '/depositos'
+      fullPath: '/grupo/$groupId/depositos'
+      preLoaderRoute: typeof AuthenticatedGrupoGroupIdDepositosRouteImport
+      parentRoute: typeof AuthenticatedGrupoGroupIdRouteRoute
+    }
     '/_authenticated/grupo/$groupId/direcao': {
       id: '/_authenticated/grupo/$groupId/direcao'
       path: '/direcao'
@@ -283,14 +316,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGrupoGroupIdMembrosRouteImport
       parentRoute: typeof AuthenticatedGrupoGroupIdRouteRoute
     }
+    '/_authenticated/grupo/$groupId/poupanca': {
+      id: '/_authenticated/grupo/$groupId/poupanca'
+      path: '/poupanca'
+      fullPath: '/grupo/$groupId/poupanca'
+      preLoaderRoute: typeof AuthenticatedGrupoGroupIdPoupancaRouteImport
+      parentRoute: typeof AuthenticatedGrupoGroupIdRouteRoute
+    }
   }
 }
 
 interface AuthenticatedGrupoGroupIdRouteRouteChildren {
   AuthenticatedGrupoGroupIdAtividadeRoute: typeof AuthenticatedGrupoGroupIdAtividadeRoute
   AuthenticatedGrupoGroupIdDefinicoesRoute: typeof AuthenticatedGrupoGroupIdDefinicoesRoute
+  AuthenticatedGrupoGroupIdDepositosRoute: typeof AuthenticatedGrupoGroupIdDepositosRoute
   AuthenticatedGrupoGroupIdDirecaoRoute: typeof AuthenticatedGrupoGroupIdDirecaoRoute
   AuthenticatedGrupoGroupIdMembrosRoute: typeof AuthenticatedGrupoGroupIdMembrosRoute
+  AuthenticatedGrupoGroupIdPoupancaRoute: typeof AuthenticatedGrupoGroupIdPoupancaRoute
   AuthenticatedGrupoGroupIdIndexRoute: typeof AuthenticatedGrupoGroupIdIndexRoute
 }
 
@@ -300,10 +342,14 @@ const AuthenticatedGrupoGroupIdRouteRouteChildren: AuthenticatedGrupoGroupIdRout
       AuthenticatedGrupoGroupIdAtividadeRoute,
     AuthenticatedGrupoGroupIdDefinicoesRoute:
       AuthenticatedGrupoGroupIdDefinicoesRoute,
+    AuthenticatedGrupoGroupIdDepositosRoute:
+      AuthenticatedGrupoGroupIdDepositosRoute,
     AuthenticatedGrupoGroupIdDirecaoRoute:
       AuthenticatedGrupoGroupIdDirecaoRoute,
     AuthenticatedGrupoGroupIdMembrosRoute:
       AuthenticatedGrupoGroupIdMembrosRoute,
+    AuthenticatedGrupoGroupIdPoupancaRoute:
+      AuthenticatedGrupoGroupIdPoupancaRoute,
     AuthenticatedGrupoGroupIdIndexRoute: AuthenticatedGrupoGroupIdIndexRoute,
   }
 
