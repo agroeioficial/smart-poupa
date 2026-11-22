@@ -32,5 +32,13 @@
 - [x] Perfis coletivos (uma cota) na lista de membros
 - [x] Testes de segurança atualizados (91/91)
 
+## Fase 2 — Depósitos e comprovativos (22/11)
+- [ ] Contas/carteiras do grupo (M-Pesa, e-Mola, mKesh, banco)
+- [ ] Submissão de depósito (individual ou perfil coletivo) com referência e comprovativo
+- [ ] Validação/rejeição por Tesoureiro ou Diretor; saldo só após aprovação
+- [ ] Estornos documentados; registos imutáveis e auditados
+- [ ] Testes de segurança (base de dados) e de interface
+- [ ] Decisões pendentes: prazo de validação; quem faz estornos (perguntado à AGROEI)
+
 ## Próximas fases (não iniciar sem pedido)
-- Fase 2 — Poupanças · Fase 3 — Empréstimos · Fase 4 — Administração · Fase 5 — SaaS AGROEI · Fase 6 — Exportação e PWA (ícones da app instalada já preparados)
+- Fase 3 — Empréstimos · Fase 4 — Administração · Fase 5 — SaaS AGROEI · Fase 6 — Exportação e PWA (ícones da app instalada já preparados)
