@@ -38,7 +38,7 @@
 - [ ] Validação/rejeição por Tesoureiro ou Diretor; saldo só após aprovação
 - [ ] Estornos documentados; registos imutáveis e auditados
 - [ ] Testes de segurança (base de dados) e de interface
-- [ ] Decisões pendentes: prazo de validação; quem faz estornos (perguntado à AGROEI)
+- [x] Decisões: sem prazo de validação; estorno por Tesoureiro ou Diretor
 
 ## Próximas fases (não iniciar sem pedido)
 - Fase 3 — Empréstimos · Fase 4 — Administração · Fase 5 — SaaS AGROEI · Fase 6 — Exportação e PWA (ícones da app instalada já preparados)
