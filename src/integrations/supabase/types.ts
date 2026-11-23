@@ -483,6 +483,133 @@ export type Database = {
         }
         Relationships: []
       }
+      loan_votes: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          loan_id: string
+          reason: string | null
+          vote: Database["public"]["Enums"]["vote_choice"]
+          voter_member_id: string
+          voter_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          loan_id: string
+          reason?: string | null
+          vote: Database["public"]["Enums"]["vote_choice"]
+          voter_member_id: string
+          voter_user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          loan_id?: string
+          reason?: string | null
+          vote?: Database["public"]["Enums"]["vote_choice"]
+          voter_member_id?: string
+          voter_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_votes_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_votes_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_votes_voter_member_id_fkey"
+            columns: ["voter_member_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loans: {
+        Row: {
+          amount: number
+          cancel_reason: string | null
+          created_at: string
+          decided_at: string | null
+          declaration_path: string
+          group_id: string
+          guarantee_description: string | null
+          guarantee_path: string | null
+          id: string
+          member_id: string
+          purpose: string
+          rejection_reason: string | null
+          requested_by: string
+          status: Database["public"]["Enums"]["loan_status"]
+          term_months: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          cancel_reason?: string | null
+          created_at?: string
+          decided_at?: string | null
+          declaration_path: string
+          group_id: string
+          guarantee_description?: string | null
+          guarantee_path?: string | null
+          id?: string
+          member_id: string
+          purpose: string
+          rejection_reason?: string | null
+          requested_by: string
+          status?: Database["public"]["Enums"]["loan_status"]
+          term_months: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          cancel_reason?: string | null
+          created_at?: string
+          decided_at?: string | null
+          declaration_path?: string
+          group_id?: string
+          guarantee_description?: string | null
+          guarantee_path?: string | null
+          id?: string
+          member_id?: string
+          purpose?: string
+          rejection_reason?: string | null
+          requested_by?: string
+          status?: Database["public"]["Enums"]["loan_status"]
+          term_months?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_beneficiaries: {
         Row: {
           created_at: string
@@ -955,6 +1082,14 @@ export type Database = {
         Args: { _email: string; _uid: string }
         Returns: undefined
       }
+      _loan_vote_state: {
+        Args: { _loan_id: string }
+        Returns: Database["public"]["Enums"]["loan_status"]
+      }
+      _loan_voters: {
+        Args: { _borrower: string; _group: string }
+        Returns: string[]
+      }
       _log_admin_roles: {
         Args: {
           _action: string
@@ -1027,6 +1162,10 @@ export type Database = {
       can_manage_members: {
         Args: { _group: string; _uid: string }
         Returns: boolean
+      }
+      cancel_loan_request: {
+        Args: { _loan_id: string; _reason?: string }
+        Returns: undefined
       }
       cancel_member_status_request: {
         Args: { _request_id: string }
@@ -1186,6 +1325,18 @@ export type Database = {
         }
         Returns: string
       }
+      submit_loan_request: {
+        Args: {
+          _amount: number
+          _declaration_path: string
+          _group_id: string
+          _guarantee_description?: string
+          _guarantee_path?: string
+          _purpose: string
+          _term_months: number
+        }
+        Returns: string
+      }
       update_collective_profile: {
         Args: { _name: string; _profile_id: string; _relation_type: string }
         Returns: undefined
@@ -1214,6 +1365,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      vote_loan: {
+        Args: { _approve: boolean; _loan_id: string; _reason?: string }
+        Returns: Database["public"]["Enums"]["loan_status"]
+      }
       vote_member_status_request: {
         Args: { _approve: boolean; _reason?: string; _request_id: string }
         Returns: Database["public"]["Enums"]["request_status"]
@@ -1223,6 +1378,16 @@ export type Database = {
       deposit_status: "pendente" | "aprovado" | "rejeitado"
       group_role: "diretor" | "tesoureiro" | "secretario" | "membro"
       group_status: "ativo" | "suspenso"
+      loan_status:
+        | "submetido"
+        | "em_analise"
+        | "aprovado"
+        | "rejeitado"
+        | "cancelado"
+        | "desembolsado"
+        | "em_pagamento"
+        | "liquidado"
+        | "em_incumprimento"
       member_status:
         | "convidado"
         | "pendente_aprovacao"
@@ -1363,6 +1528,17 @@ export const Constants = {
       deposit_status: ["pendente", "aprovado", "rejeitado"],
       group_role: ["diretor", "tesoureiro", "secretario", "membro"],
       group_status: ["ativo", "suspenso"],
+      loan_status: [
+        "submetido",
+        "em_analise",
+        "aprovado",
+        "rejeitado",
+        "cancelado",
+        "desembolsado",
+        "em_pagamento",
+        "liquidado",
+        "em_incumprimento",
+      ],
       member_status: [
         "convidado",
         "pendente_aprovacao",
