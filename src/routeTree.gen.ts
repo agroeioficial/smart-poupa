@@ -22,6 +22,7 @@ import { Route as AuthenticatedGrupoGroupIdAtividadeRouteImport } from './routes
 import { Route as AuthenticatedGrupoGroupIdDefinicoesRouteImport } from './routes/_authenticated/grupo/$groupId/definicoes'
 import { Route as AuthenticatedGrupoGroupIdDepositosRouteImport } from './routes/_authenticated/grupo/$groupId/depositos'
 import { Route as AuthenticatedGrupoGroupIdDirecaoRouteImport } from './routes/_authenticated/grupo/$groupId/direcao'
+import { Route as AuthenticatedGrupoGroupIdEmprestimosRouteImport } from './routes/_authenticated/grupo/$groupId/emprestimos'
 import { Route as AuthenticatedGrupoGroupIdMembrosRouteImport } from './routes/_authenticated/grupo/$groupId/membros'
 import { Route as AuthenticatedGrupoGroupIdPoupancaRouteImport } from './routes/_authenticated/grupo/$groupId/poupanca'
 
@@ -95,6 +96,12 @@ const AuthenticatedGrupoGroupIdDirecaoRoute =
     path: '/direcao',
     getParentRoute: () => AuthenticatedGrupoGroupIdRouteRoute,
   } as any)
+const AuthenticatedGrupoGroupIdEmprestimosRoute =
+  AuthenticatedGrupoGroupIdEmprestimosRouteImport.update({
+    id: '/emprestimos',
+    path: '/emprestimos',
+    getParentRoute: () => AuthenticatedGrupoGroupIdRouteRoute,
+  } as any)
 const AuthenticatedGrupoGroupIdMembrosRoute =
   AuthenticatedGrupoGroupIdMembrosRouteImport.update({
     id: '/membros',
@@ -120,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/grupo/$groupId/definicoes': typeof AuthenticatedGrupoGroupIdDefinicoesRoute
   '/grupo/$groupId/depositos': typeof AuthenticatedGrupoGroupIdDepositosRoute
   '/grupo/$groupId/direcao': typeof AuthenticatedGrupoGroupIdDirecaoRoute
+  '/grupo/$groupId/emprestimos': typeof AuthenticatedGrupoGroupIdEmprestimosRoute
   '/grupo/$groupId/membros': typeof AuthenticatedGrupoGroupIdMembrosRoute
   '/grupo/$groupId/poupanca': typeof AuthenticatedGrupoGroupIdPoupancaRoute
   '/grupo/$groupId/': typeof AuthenticatedGrupoGroupIdIndexRoute
@@ -135,6 +143,7 @@ export interface FileRoutesByTo {
   '/grupo/$groupId/definicoes': typeof AuthenticatedGrupoGroupIdDefinicoesRoute
   '/grupo/$groupId/depositos': typeof AuthenticatedGrupoGroupIdDepositosRoute
   '/grupo/$groupId/direcao': typeof AuthenticatedGrupoGroupIdDirecaoRoute
+  '/grupo/$groupId/emprestimos': typeof AuthenticatedGrupoGroupIdEmprestimosRoute
   '/grupo/$groupId/membros': typeof AuthenticatedGrupoGroupIdMembrosRoute
   '/grupo/$groupId/poupanca': typeof AuthenticatedGrupoGroupIdPoupancaRoute
   '/grupo/$groupId': typeof AuthenticatedGrupoGroupIdIndexRoute
@@ -153,6 +162,7 @@ export interface FileRoutesById {
   '/_authenticated/grupo/$groupId/definicoes': typeof AuthenticatedGrupoGroupIdDefinicoesRoute
   '/_authenticated/grupo/$groupId/depositos': typeof AuthenticatedGrupoGroupIdDepositosRoute
   '/_authenticated/grupo/$groupId/direcao': typeof AuthenticatedGrupoGroupIdDirecaoRoute
+  '/_authenticated/grupo/$groupId/emprestimos': typeof AuthenticatedGrupoGroupIdEmprestimosRoute
   '/_authenticated/grupo/$groupId/membros': typeof AuthenticatedGrupoGroupIdMembrosRoute
   '/_authenticated/grupo/$groupId/poupanca': typeof AuthenticatedGrupoGroupIdPoupancaRoute
   '/_authenticated/grupo/$groupId/': typeof AuthenticatedGrupoGroupIdIndexRoute
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/grupo/$groupId/definicoes'
     | '/grupo/$groupId/depositos'
     | '/grupo/$groupId/direcao'
+    | '/grupo/$groupId/emprestimos'
     | '/grupo/$groupId/membros'
     | '/grupo/$groupId/poupanca'
     | '/grupo/$groupId/'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/grupo/$groupId/definicoes'
     | '/grupo/$groupId/depositos'
     | '/grupo/$groupId/direcao'
+    | '/grupo/$groupId/emprestimos'
     | '/grupo/$groupId/membros'
     | '/grupo/$groupId/poupanca'
     | '/grupo/$groupId'
@@ -203,6 +215,7 @@ export interface FileRouteTypes {
     | '/_authenticated/grupo/$groupId/definicoes'
     | '/_authenticated/grupo/$groupId/depositos'
     | '/_authenticated/grupo/$groupId/direcao'
+    | '/_authenticated/grupo/$groupId/emprestimos'
     | '/_authenticated/grupo/$groupId/membros'
     | '/_authenticated/grupo/$groupId/poupanca'
     | '/_authenticated/grupo/$groupId/'
@@ -309,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGrupoGroupIdDirecaoRouteImport
       parentRoute: typeof AuthenticatedGrupoGroupIdRouteRoute
     }
+    '/_authenticated/grupo/$groupId/emprestimos': {
+      id: '/_authenticated/grupo/$groupId/emprestimos'
+      path: '/emprestimos'
+      fullPath: '/grupo/$groupId/emprestimos'
+      preLoaderRoute: typeof AuthenticatedGrupoGroupIdEmprestimosRouteImport
+      parentRoute: typeof AuthenticatedGrupoGroupIdRouteRoute
+    }
     '/_authenticated/grupo/$groupId/membros': {
       id: '/_authenticated/grupo/$groupId/membros'
       path: '/membros'
@@ -331,6 +351,7 @@ interface AuthenticatedGrupoGroupIdRouteRouteChildren {
   AuthenticatedGrupoGroupIdDefinicoesRoute: typeof AuthenticatedGrupoGroupIdDefinicoesRoute
   AuthenticatedGrupoGroupIdDepositosRoute: typeof AuthenticatedGrupoGroupIdDepositosRoute
   AuthenticatedGrupoGroupIdDirecaoRoute: typeof AuthenticatedGrupoGroupIdDirecaoRoute
+  AuthenticatedGrupoGroupIdEmprestimosRoute: typeof AuthenticatedGrupoGroupIdEmprestimosRoute
   AuthenticatedGrupoGroupIdMembrosRoute: typeof AuthenticatedGrupoGroupIdMembrosRoute
   AuthenticatedGrupoGroupIdPoupancaRoute: typeof AuthenticatedGrupoGroupIdPoupancaRoute
   AuthenticatedGrupoGroupIdIndexRoute: typeof AuthenticatedGrupoGroupIdIndexRoute
@@ -346,6 +367,8 @@ const AuthenticatedGrupoGroupIdRouteRouteChildren: AuthenticatedGrupoGroupIdRout
       AuthenticatedGrupoGroupIdDepositosRoute,
     AuthenticatedGrupoGroupIdDirecaoRoute:
       AuthenticatedGrupoGroupIdDirecaoRoute,
+    AuthenticatedGrupoGroupIdEmprestimosRoute:
+      AuthenticatedGrupoGroupIdEmprestimosRoute,
     AuthenticatedGrupoGroupIdMembrosRoute:
       AuthenticatedGrupoGroupIdMembrosRoute,
     AuthenticatedGrupoGroupIdPoupancaRoute:

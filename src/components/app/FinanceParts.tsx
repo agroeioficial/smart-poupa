@@ -348,7 +348,7 @@ function waitingText(createdAt: string) {
   return n === 0 ? " · à espera desde hoje" : ` · à espera há ${n} ${n === 1 ? "dia" : "dias"}`;
 }
 
-export function ReceiptButton({ path }: { path: string }) {
+export function ReceiptButton({ path, label = "Comprovativo" }: { path: string; label?: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <Button
@@ -360,11 +360,11 @@ export function ReceiptButton({ path }: { path: string }) {
         const w = window.open("", "_blank");
         const { data, error } = await supabase.storage.from("comprovativos").createSignedUrl(path, 120);
         setBusy(false);
-        if (error || !data) { w?.close(); toast.error("Não foi possível abrir o comprovativo."); return; }
+        if (error || !data) { w?.close(); toast.error("Não foi possível abrir o documento."); return; }
         if (w) w.location.href = data.signedUrl; else window.location.href = data.signedUrl;
       }}
     >
-      <FileText /> Comprovativo
+      <FileText /> {label}
     </Button>
   );
 }

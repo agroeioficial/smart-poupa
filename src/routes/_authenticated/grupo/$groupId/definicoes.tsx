@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -8,7 +8,10 @@ import { groupQuery } from "@/lib/queries";
 import { useGroupAccess } from "@/lib/use-group-access";
 import { canEditSettings } from "@/lib/roles";
 import { errorMessage } from "@/lib/format";
+import { loanSettingsQuery } from "@/lib/loan-queries";
 import { PageHeader } from "@/components/app/PageHeader";
+import { LoanSettingsForm } from "@/components/app/LoanParts";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,6 +46,7 @@ function SettingsPage() {
   const { roles } = useGroupAccess(user.id, groupId);
   const queryClient = useQueryClient();
   const [directory, setDirectory] = useState(group?.member_directory_visible ?? false);
+  const loanSettings = useQuery(loanSettingsQuery(groupId));
 
   const save = useMutation({
     mutationFn: async (v: z.infer<typeof schema>) => {
@@ -79,7 +83,7 @@ function SettingsPage() {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Definições" description="Dados oficiais e privacidade do grupo." />
+      <PageHeader title="Definições" description="Dados oficiais, privacidade e regras de empréstimo do grupo." />
       <form onSubmit={onSubmit} className="space-y-4">
         <Card className="space-y-4 p-5 sm:p-6">
           <h2 className="font-semibold">Dados do grupo</h2>
@@ -122,6 +126,9 @@ function SettingsPage() {
           </Button>
         </div>
       </form>
+      <div className="mt-8">
+        {loanSettings.data ? <LoanSettingsForm key={JSON.stringify(loanSettings.data)} groupId={groupId} settings={loanSettings.data} /> : <Skeleton className="h-64 rounded-xl" />}
+      </div>
     </div>
   );
 }

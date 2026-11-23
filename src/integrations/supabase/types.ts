@@ -295,6 +295,47 @@ export type Database = {
           },
         ]
       }
+      group_loan_settings: {
+        Row: {
+          created_at: string
+          group_id: string
+          guarantee_required: boolean
+          interest_method: string | null
+          interest_rate: number | null
+          updated_at: string
+          updated_by: string | null
+          vote_deadline_days: number | null
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          guarantee_required?: boolean
+          interest_method?: string | null
+          interest_rate?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          vote_deadline_days?: number | null
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          guarantee_required?: boolean
+          interest_method?: string | null
+          interest_rate?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          vote_deadline_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_loan_settings_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: true
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_member_roles: {
         Row: {
           created_at: string
@@ -549,6 +590,8 @@ export type Database = {
           guarantee_description: string | null
           guarantee_path: string | null
           id: string
+          interest_method: string | null
+          interest_rate: number | null
           member_id: string
           purpose: string
           rejection_reason: string | null
@@ -567,6 +610,8 @@ export type Database = {
           guarantee_description?: string | null
           guarantee_path?: string | null
           id?: string
+          interest_method?: string | null
+          interest_rate?: number | null
           member_id: string
           purpose: string
           rejection_reason?: string | null
@@ -585,6 +630,8 @@ export type Database = {
           guarantee_description?: string | null
           guarantee_path?: string | null
           id?: string
+          interest_method?: string | null
+          interest_rate?: number | null
           member_id?: string
           purpose?: string
           rejection_reason?: string | null
@@ -1291,6 +1338,16 @@ export type Database = {
       review_deposit: {
         Args: { _approve: boolean; _deposit_id: string; _reason?: string }
         Returns: Database["public"]["Enums"]["deposit_status"]
+      }
+      set_group_loan_settings: {
+        Args: {
+          _group_id: string
+          _guarantee_required: boolean
+          _interest_method: string
+          _interest_rate: number
+          _vote_deadline_days: number
+        }
+        Returns: undefined
       }
       set_member_collective_profile: {
         Args: { _member_id: string; _profile_id: string }

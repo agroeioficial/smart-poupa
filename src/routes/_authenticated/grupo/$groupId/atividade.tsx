@@ -52,6 +52,13 @@ const ACTION_LABEL: Record<string, string> = {
   deposito_aprovado: "Depósito aprovado",
   deposito_rejeitado: "Depósito rejeitado",
   deposito_estornado: "Depósito estornado",
+  emprestimo_pedido: "Pedido de empréstimo enviado",
+  emprestimo_voto_aprovado: "Voto a favor de um empréstimo",
+  emprestimo_voto_rejeitado: "Voto contra um empréstimo",
+  emprestimo_aprovado: "Empréstimo aprovado pela direção",
+  emprestimo_rejeitado: "Empréstimo rejeitado",
+  emprestimo_cancelado: "Pedido de empréstimo cancelado",
+  regras_emprestimo_alteradas: "Regras de empréstimo alteradas",
 };
 
 function valueOf(details: unknown): number | null {

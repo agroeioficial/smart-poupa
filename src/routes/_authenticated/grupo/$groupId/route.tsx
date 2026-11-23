@@ -54,6 +54,7 @@ function GroupLayout() {
     { to: "/grupo/$groupId" as const, label: "Início", exact: true, show: true },
     { to: "/grupo/$groupId/poupanca" as const, label: "Poupança", exact: false, show: true },
     { to: "/grupo/$groupId/depositos" as const, label: "Depósitos", exact: false, show: canManageFinance(roles) },
+    { to: "/grupo/$groupId/emprestimos" as const, label: "Empréstimos", exact: false, show: true },
     { to: "/grupo/$groupId/membros" as const, label: "Membros", exact: false, show: true },
     { to: "/grupo/$groupId/direcao" as const, label: "Direção", exact: false, show: true },
     { to: "/grupo/$groupId/atividade" as const, label: "Atividade", exact: false, show: canEditSettings(roles) },

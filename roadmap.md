@@ -40,5 +40,13 @@
 - [x] Testes de segurança (45/45 na base de dados; Fase 1 continua 91/91) e de interface
 - [x] Decisões: sem prazo de validação; estorno por Tesoureiro ou Diretor
 
+## Fase 3 — Empréstimos (23/11)
+- [x] Pedido de empréstimo (valor, prazo, finalidade, garantia, declaração de dívida)
+- [x] Votação da direção com a regra da suspensão; rejeição com motivo; cancelamento pelo membro
+- [x] Regras por grupo: prazo de votação, garantia obrigatória, método e taxa de juros
+- [x] Testes (44/44 na base de dados; Fase 1 91/91; Fase 2 45/45; interface 47/47) e verificação no navegador
+- [ ] Desembolso externo registado pelo Tesoureiro, plano de prestações, juros e dívidas (próxima etapa, a pedido)
+- [ ] Empréstimos a não membros: aguarda validação jurídica da AGROEI
+
 ## Próximas fases (não iniciar sem pedido)
-- Fase 3 — Empréstimos · Fase 4 — Administração · Fase 5 — SaaS AGROEI · Fase 6 — Exportação e PWA (ícones da app instalada já preparados)
+- Fase 4 — Administração · Fase 5 — SaaS AGROEI · Fase 6 — Exportação e PWA (ícones da app instalada já preparados)
